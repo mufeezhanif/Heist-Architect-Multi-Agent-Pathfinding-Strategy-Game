@@ -1,0 +1,13 @@
+prompts/
+__pycache__/
+*.pyc
+.env
+venv/
+.venv/
+node_modules/
+dist/
+build/
+.vscode/
+.idea/
+.DS_Store
+*.egg-info/
