@@ -10,9 +10,15 @@ import SensorLog from './components/SensorLog'
 import CBSTreePanel from './visualizations/CBSTreePanel'
 import BayesianPanel from './visualizations/BayesianPanel'
 import MinimaxPanel from './visualizations/MinimaxPanel'
+import TutorialOverlay from './components/TutorialOverlay'
+import NarrationPanel from './components/NarrationPanel'
+import HelpButton from './components/HelpButton'
+import HowToPlay from './components/HowToPlay'
+import AlgorithmStatus from './components/AlgorithmStatus'
 
 export default function App() {
   const screen = useGameStore((s) => s.screen)
+  const showHowToPlay = useGameStore((s) => s.showHowToPlay)
 
   if (screen === 'landing') {
     return <LandingPage />
@@ -28,11 +34,20 @@ export default function App() {
       <Controls />
       <SpeedControls />
       <SensorLog />
+      <NarrationPanel />
+      <AlgorithmStatus />
+      <HelpButton />
 
       {/* Visualization Panels */}
       <CBSTreePanel />
       <BayesianPanel />
       <MinimaxPanel />
+
+      {/* Tutorial */}
+      <TutorialOverlay />
+
+      {/* In-game How to Play modal */}
+      {showHowToPlay && <HowToPlay asModal />}
 
       {/* Game Over */}
       <GameOverScreen />

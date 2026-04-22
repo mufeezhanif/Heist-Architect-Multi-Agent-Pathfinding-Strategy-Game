@@ -75,10 +75,17 @@ export default function Building3D() {
 
       {/* Floor tiles */}
       {floors.map((f, i) => (
-        <mesh key={`f${i}`} position={[f.pos[0], f.pos[1], f.pos[2]]} rotation={[-Math.PI / 2, 0, 0]}>
-          <planeGeometry args={[CELL * 0.96, CELL * 0.96]} />
-          <meshStandardMaterial color={f.color} transparent opacity={0.7} />
-        </mesh>
+        <group key={`f${i}`}>
+          <mesh position={[f.pos[0], f.pos[1], f.pos[2]]} rotation={[-Math.PI / 2, 0, 0]}>
+            <planeGeometry args={[CELL * 0.96, CELL * 0.96]} />
+            <meshStandardMaterial color={f.color} transparent opacity={0.7} />
+          </mesh>
+          {/* Subtle cell border */}
+          <mesh position={[f.pos[0], f.pos[1] + 0.001, f.pos[2]]} rotation={[-Math.PI / 2, 0, 0]}>
+            <ringGeometry args={[CELL * 0.47, CELL * 0.49, 4, 1, Math.PI / 4]} />
+            <meshBasicMaterial color="#00d4ff" transparent opacity={0.05} side={THREE.DoubleSide} />
+          </mesh>
+        </group>
       ))}
 
       {/* Walls */}

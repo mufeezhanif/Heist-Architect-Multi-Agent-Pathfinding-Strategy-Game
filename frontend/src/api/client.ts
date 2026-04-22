@@ -1,5 +1,6 @@
 /* ── Heist Architect — REST + WebSocket API client ── */
 import { useGameStore } from '../store/gameStore'
+import { normalizeAgent, normalizeGuard } from './normalize'
 
 const API = '/api'
 
@@ -49,7 +50,6 @@ export async function executeTurn(gameId: string) {
 let ws: WebSocket | null = null
 
 export function connectWebSocket(gameId: string) {
-  const store = useGameStore.getState()
   const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws'
   const host = window.location.host
   ws = new WebSocket(`${protocol}://${host}/ws/game/${gameId}`)
@@ -64,10 +64,11 @@ export function connectWebSocket(gameId: string) {
 
     switch (data.type) {
       case 'connected':
-        // Initial state from server
         if (data.state) {
-          if (data.state.crew) s.setCrew(data.state.crew)
-          if (data.state.guards) s.setGuards(data.state.guards)
+          if (data.state.crew) s.setCrew(data.state.crew.map(normalizeAgent))
+          if (data.state.guards) s.setGuards(data.state.guards.map(normalizeGuard))
+          if (data.state.event_log) s.setEventLog(data.state.event_log)
+          if (data.state.alert_level !== undefined) s.setAlertLevel(data.state.alert_level)
         }
         break
 
@@ -78,10 +79,80 @@ export function connectWebSocket(gameId: string) {
       case 'plan_complete':
         s.setPaths(data.paths || {})
         s.setPlanning(false)
+
+        // Add algorithm narration
+        if (data.algorithms_used) {
+          const algos = data.algorithms_used
+          if (algos.astar) s.addNarration({ type: 'info', text: `🔍 A*: ${algos.astar}` })
+          if (algos.cbs) s.addNarration({ type: 'info', text: `🌳 CBS: ${algos.cbs}` })
+          if (algos.csp && typeof algos.csp !== 'string') {
+            for (const c of algos.csp) {
+              s.addNarration({ type: 'info', text: `📋 CSP: ${c.description} — ${c.satisfied ? '✅ Satisfied' : '❌ Violated'}` })
+            }
+          }
+        }
+
+        // Auto-execute if quick mode triggered it
+        if ((s as Record<string, unknown>)._autoExecuteAfterPlan) {
+          useGameStore.setState({ _autoExecuteAfterPlan: false } as Record<string, unknown>)
+          sendWS({ action: 'execute' })
+        }
+        break
+
+      case 'step':
+        // Track execution step count
+        if (data.step_total) s.setExecutionTotal(data.step_total)
+        s.setExecutionStep(data.step || 0)
+
+        // Add narration entries
+        if (data.narration && Array.isArray(data.narration)) {
+          for (const n of data.narration) {
+            s.addNarration(n)
+          }
+        }
+
+        // Animate individual steps
+        if (data.crew_positions) {
+          s.setCrew(
+            s.crew.map((c) => ({
+              ...c,
+              pos: data.crew_positions[c.agent_id] || c.pos,
+            })),
+          )
+        }
+        if (data.guard_positions) {
+          s.setGuards(
+            s.guards.map((g) => ({
+              ...g,
+              pos: data.guard_positions[g.guard_id] || g.pos,
+            })),
+          )
+        }
+        if (data.alert_level !== undefined) {
+          s.setAlertLevel(data.alert_level)
+        }
+        if (data.alert_message) {
+          s.addEventLog(data.alert_message)
+        }
         break
 
       case 'turn_result':
         s.setTurnResult(data)
+
+        // Add algorithm narration
+        if (data.algorithms_used) {
+          const algos = data.algorithms_used
+          if (algos.bayesian) s.addNarration({ type: 'info', text: `📊 Bayesian: ${algos.bayesian}` })
+          if (algos.minimax) s.addNarration({ type: 'info', text: `🧠 Minimax: ${algos.minimax}` })
+        }
+
+        // Add turn narration
+        if (data.narration && Array.isArray(data.narration)) {
+          for (const n of data.narration) {
+            s.addNarration(n)
+          }
+        }
+
         // Update crew/guard positions
         if (data.crew_positions) {
           s.setCrew(
@@ -99,11 +170,34 @@ export function connectWebSocket(gameId: string) {
             })),
           )
         }
+        // Clear paths, waypoints, and pending moves so player can re-plan
+        if (data.game_status === 'planning' || data.game_status === 'active') {
+          s.setPaths({})
+          s.clearWaypoints()
+          s.clearPendingMoves()
+          s.setPlanning(false)
+          s.setExecutionMode('idle')
+        }
+        break
+
+      case 'ability_result':
+        if (data.success && data.message) {
+          s.addEventLog(data.message)
+        }
+        if (data.crew) {
+          s.setCrew(data.crew.map(normalizeAgent))
+        }
+        if (data.guards) {
+          s.setGuards(data.guards.map(normalizeGuard))
+        }
+        if (data.event_log) {
+          s.setEventLog(data.event_log)
+        }
         break
 
       case 'state':
-        if (data.state?.crew) s.setCrew(data.state.crew)
-        if (data.state?.guards) s.setGuards(data.state.guards)
+        if (data.state?.crew) s.setCrew(data.state.crew.map(normalizeAgent))
+        if (data.state?.guards) s.setGuards(data.state.guards.map(normalizeGuard))
         break
     }
   }

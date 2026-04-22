@@ -59,7 +59,12 @@ export default function BayesianPanel() {
 
   return (
     <div style={s.panel}>
-      <div style={s.title}>Bayesian Belief (Top cells)</div>
+      <div style={s.title}>
+        <div>Warden's Suspicion Map</div>
+        <div style={{ fontSize: 9, color: '#666', textTransform: 'none', letterSpacing: 0, marginTop: 2 }}>
+          Where the Warden thinks your crew is hiding
+        </div>
+      </div>
       <div style={s.list}>
         {topCells.map(({ key, prob }) => (
           <div key={key}>

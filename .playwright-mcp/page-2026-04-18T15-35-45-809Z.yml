@@ -1,0 +1,8 @@
+- generic [ref=e3]:
+  - generic:
+    - generic: HEIST ARCHITECT
+    - generic: Multi-Agent Pathfinding Strategy Game
+    - generic [ref=e7]:
+      - button "Play as Mastermind" [ref=e8] [cursor=pointer]
+      - button "Watch AI vs AI" [ref=e9] [cursor=pointer]
+  - generic [ref=e10]: CS 2005 — Artificial Intelligence Lab Project

@@ -192,8 +192,8 @@ def create_default_sensors(building: Building) -> SensorSystem:
                     x=x, y=y, radius=1,
                 ))
 
-    # Motion sensors at key locations
-    motion_spots = [(4, 8), (14, 3)]  # Near objectives
+    # Motion sensors at key locations (near objectives on 30x25 map)
+    motion_spots = [(12, 13), (23, 13), (5, 8), (15, 18)]
     for mx, my in motion_spots:
         sid += 1
         sensors.append(Sensor(

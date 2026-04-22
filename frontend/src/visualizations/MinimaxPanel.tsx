@@ -156,7 +156,10 @@ export default function MinimaxPanel() {
         letterSpacing: 2,
         borderBottom: '1px solid rgba(255, 107, 53, 0.15)',
       }}>
-        Minimax Decision Tree
+        <div>Warden's Strategy — Minimax</div>
+        <div style={{ fontSize: 9, color: '#555', textTransform: 'none', letterSpacing: 0, marginTop: 2 }}>
+          Deciding how to reposition guards to catch you
+        </div>
       </div>
       <svg ref={svgRef} width={PANEL_W} height={PANEL_H - 28} />
     </div>

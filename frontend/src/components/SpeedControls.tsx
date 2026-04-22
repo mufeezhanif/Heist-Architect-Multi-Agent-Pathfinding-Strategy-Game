@@ -1,4 +1,4 @@
-/* ── SpeedControls — AI vs AI speed + viz toggles ── */
+/* ── SpeedControls — AI vs AI speed + viz toggles + step-by-step execution ── */
 import { useGameStore } from '../store/gameStore'
 import { sendWS } from '../api/client'
 import { useEffect, useRef } from 'react'
@@ -26,6 +26,13 @@ const s: Record<string, React.CSSProperties> = {
     letterSpacing: 2,
     marginBottom: 4,
     fontFamily: 'monospace',
+  },
+  desc: {
+    fontSize: 9,
+    color: '#555',
+    fontFamily: 'monospace',
+    marginBottom: 4,
+    lineHeight: 1.4,
   },
   row: {
     display: 'flex',
@@ -59,6 +66,36 @@ const s: Record<string, React.CSSProperties> = {
     background: 'transparent',
     color: '#e94560',
   },
+  execSection: {
+    borderTop: '1px solid rgba(0, 212, 255, 0.1)',
+    paddingTop: 8,
+    marginTop: 4,
+  },
+  execBtnRow: {
+    display: 'flex',
+    gap: 4,
+    marginTop: 4,
+  },
+  execBtn: {
+    flex: 1,
+    padding: '5px 8px',
+    border: '1px solid rgba(0, 255, 136, 0.3)',
+    borderRadius: 4,
+    cursor: 'pointer',
+    fontFamily: 'monospace',
+    fontSize: 10,
+    fontWeight: 700,
+    background: 'transparent',
+    color: '#00ff88',
+    transition: 'all 0.15s',
+  },
+  stepCounter: {
+    fontSize: 10,
+    fontFamily: 'monospace',
+    color: '#666',
+    textAlign: 'center' as const,
+    marginTop: 4,
+  },
 }
 
 export default function SpeedControls() {
@@ -76,7 +113,16 @@ export default function SpeedControls() {
   const clearCBSEvents = useGameStore((st) => st.clearCBSEvents)
   const setPlanning = useGameStore((st) => st.setPlanning)
 
+  // Execution step-by-step state
+  const executionStep = useGameStore((st) => st.executionStep)
+  const executionTotal = useGameStore((st) => st.executionTotal)
+  const executionMode = useGameStore((st) => st.executionMode)
+  const setExecutionMode = useGameStore((st) => st.setExecutionMode)
+  const stepQueue = useGameStore((st) => st.stepQueue)
+  const popStepFromQueue = useGameStore((st) => st.popStepFromQueue)
+
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const playIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
 
   // Auto-play for AI vs AI
   useEffect(() => {
@@ -92,24 +138,66 @@ export default function SpeedControls() {
     }
   }, [aiRunning, aiSpeed, gameStatus, clearCBSEvents, setPlanning])
 
+  // Auto-play steps during execution
+  useEffect(() => {
+    if (executionMode === 'playing' && stepQueue.length > 0) {
+      playIntervalRef.current = setInterval(() => {
+        const s = useGameStore.getState()
+        if (s.stepQueue.length > 0) {
+          s.popStepFromQueue()
+        } else {
+          setExecutionMode('done')
+        }
+      }, 600 / aiSpeed)
+    }
+    return () => {
+      if (playIntervalRef.current) clearInterval(playIntervalRef.current)
+    }
+  }, [executionMode, stepQueue.length, aiSpeed, setExecutionMode])
+
   // Stop when game ends
   useEffect(() => {
     if (gameStatus !== 'active') setAiRunning(false)
   }, [gameStatus, setAiRunning])
 
-  const vizToggles: { key: 'showCBSTree' | 'showBayesian' | 'showMinimax' | 'showAstarViz'; label: string; active: boolean }[] = [
-    { key: 'showCBSTree', label: 'CBS Tree', active: showCBSTree },
-    { key: 'showBayesian', label: 'Bayesian', active: showBayesian },
-    { key: 'showMinimax', label: 'Minimax', active: showMinimax },
-    { key: 'showAstarViz', label: 'A* Viz', active: showAstarViz },
+  const handleStep = () => {
+    if (stepQueue.length > 0) {
+      popStepFromQueue()
+      if (stepQueue.length <= 1) {
+        setExecutionMode('done')
+      }
+    }
+  }
+
+  const handlePlay = () => {
+    setExecutionMode(executionMode === 'playing' ? 'paused' : 'playing')
+  }
+
+  const handleSkip = () => {
+    // Process all remaining steps instantly
+    const s = useGameStore.getState()
+    while (s.stepQueue.length > 0) {
+      s.popStepFromQueue()
+    }
+    setExecutionMode('done')
+  }
+
+  const vizToggles: { key: 'showCBSTree' | 'showBayesian' | 'showMinimax' | 'showAstarViz'; label: string; desc: string; active: boolean }[] = [
+    { key: 'showCBSTree', label: 'CBS Tree', desc: 'Path planning algorithm', active: showCBSTree },
+    { key: 'showBayesian', label: 'Bayesian', desc: 'Warden suspicion map', active: showBayesian },
+    { key: 'showMinimax', label: 'Minimax', desc: 'Warden strategy tree', active: showMinimax },
+    { key: 'showAstarViz', label: 'A* Viz', desc: 'Pathfinding visualization', active: showAstarViz },
   ]
+
+  const hasSteps = stepQueue.length > 0
 
   return (
     <div style={s.panel}>
-      <div style={s.title}>Visualizations</div>
+      <div style={s.title}>AI Visualizations</div>
+      <div style={s.desc}>Toggle algorithm panels to see how the AI works</div>
       {vizToggles.map((v) => (
         <div key={v.key} style={s.row}>
-          <span style={s.label}>{v.label}</span>
+          <span style={s.label} title={v.desc}>{v.label}</span>
           <button
             style={{
               ...s.toggleBtn,
@@ -118,11 +206,54 @@ export default function SpeedControls() {
               color: v.active ? '#00d4ff' : '#666',
             }}
             onClick={() => toggleViz(v.key)}
+            title={v.desc}
           >
             {v.active ? 'ON' : 'OFF'}
           </button>
         </div>
       ))}
+
+      {/* Step-by-step execution controls */}
+      {(hasSteps || executionMode !== 'idle') && (
+        <div style={s.execSection}>
+          <div style={s.title}>Execution</div>
+          <div style={s.desc}>Step through movements one-by-one or auto-play</div>
+          <div style={s.execBtnRow}>
+            <button
+              style={{ ...s.execBtn, opacity: hasSteps ? 1 : 0.3 }}
+              onClick={handleStep}
+              disabled={!hasSteps}
+              title="Advance one step of movement"
+            >
+              ⏭ Step
+            </button>
+            <button
+              style={{
+                ...s.execBtn,
+                background: executionMode === 'playing' ? 'rgba(0, 255, 136, 0.15)' : 'transparent',
+              }}
+              onClick={handlePlay}
+              disabled={!hasSteps}
+              title={executionMode === 'playing' ? 'Pause auto-play' : 'Auto-play all steps'}
+            >
+              {executionMode === 'playing' ? '⏸ Pause' : '▶ Play'}
+            </button>
+            <button
+              style={{ ...s.execBtn, color: '#ffcc00', borderColor: 'rgba(255, 204, 0, 0.3)', opacity: hasSteps ? 1 : 0.3 }}
+              onClick={handleSkip}
+              disabled={!hasSteps}
+              title="Skip to end of execution"
+            >
+              ⏩ Skip
+            </button>
+          </div>
+          {executionTotal > 0 && (
+            <div style={s.stepCounter}>
+              Step {executionStep} / {executionTotal}
+            </div>
+          )}
+        </div>
+      )}
 
       {gameMode === 'spectator' && (
         <>

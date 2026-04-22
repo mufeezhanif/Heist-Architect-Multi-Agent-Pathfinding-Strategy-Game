@@ -1,6 +1,7 @@
 """
 Heist Architect — FastAPI REST Endpoints
 """
+import math
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from game.engine import (
@@ -9,6 +10,13 @@ from game.engine import (
 )
 
 router = APIRouter()
+
+
+def _safe_float(v: float) -> float:
+    """Replace inf/nan with 0 for JSON serialization."""
+    if math.isinf(v) or math.isnan(v):
+        return 0.0
+    return v
 
 
 class CreateGameRequest(BaseModel):
@@ -28,6 +36,7 @@ def create_game_endpoint(req: CreateGameRequest):
     game = create_game(req.mode)
     return {
         "game_id": game.game_id,
+        "building": game.building.to_dict(),
         "state": game.to_dict(perspective="mastermind"),
     }
 
@@ -53,7 +62,7 @@ def plan_endpoint(game_id: str, req: PlanRequest):
     game = get_game(game_id)
     if not game:
         raise HTTPException(404, "Game not found")
-    if game.status != GameStatus.PLANNING:
+    if game.status not in (GameStatus.PLANNING, GameStatus.EXECUTING):
         raise HTTPException(400, f"Game is in {game.status.value} phase")
 
     waypoints = {
@@ -66,11 +75,10 @@ def plan_endpoint(game_id: str, req: PlanRequest):
     return {
         "success": result.success,
         "paths": result.paths,
-        "total_cost": result.total_cost,
-        "makespan": result.makespan,
+        "total_cost": _safe_float(result.total_cost),
+        "makespan": _safe_float(result.makespan),
         "conflicts_resolved": result.conflicts_resolved,
         "tree_log": result.tree_log,
-        "planning_time_remaining": game.planning_time_remaining,
     }
 
 
@@ -96,6 +104,8 @@ def execute_endpoint(game_id: str):
         "minimax_log": result.minimax_log,
         "game_status": result.game_status,
         "score": result.score,
+        "alert_level": result.alert_level,
+        "event_log": result.event_log,
     }
 
 
@@ -110,8 +120,8 @@ def ai_plan_endpoint(game_id: str):
     return {
         "success": result.success,
         "paths": result.paths,
-        "total_cost": result.total_cost,
-        "makespan": result.makespan,
+        "total_cost": _safe_float(result.total_cost),
+        "makespan": _safe_float(result.makespan),
         "conflicts_resolved": result.conflicts_resolved,
         "tree_log": result.tree_log,
     }

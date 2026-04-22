@@ -121,6 +121,7 @@ class Building:
                     "x": c.x, "y": c.y,
                     "type": c.cell_type.value,
                     "room_id": c.room_id,
+                    "walkable": c.cell_type != CellType.WALL and c.lockdown_turns <= 0,
                     "sensor": c.sensor.value if c.sensor else None,
                     "objective": c.objective.value if c.objective else None,
                     "is_locked": c.is_locked,
@@ -128,59 +129,85 @@ class Building:
                 }
                 for c in row
             ])
+
+        entries = [(c.x, c.y) for row in self.grid for c in row if c.cell_type == CellType.ENTRY]
+        extractions = [(c.x, c.y) for row in self.grid for c in row if c.cell_type == CellType.EXTRACTION]
+        objectives = [
+            {"id": c.objective.value, "pos": [c.x, c.y], "label": c.objective.value}
+            for row in self.grid for c in row if c.objective is not None
+        ]
+
         return {
             "width": self.width,
             "height": self.height,
             "name": self.name,
             "grid": grid_data,
             "cameras": [
-                {"id": cam.camera_id, "x": cam.x, "y": cam.y,
-                 "direction": cam.direction, "active": cam.active}
+                {
+                    "id": cam.camera_id,
+                    "pos": [cam.x, cam.y],
+                    "direction": cam.direction,
+                    "active": cam.active,
+                    "vision": self.get_camera_vision(cam),
+                }
                 for cam in self.cameras
             ],
+            "entries": entries,
+            "extraction_points": extractions,
+            "objectives": objectives,
         }
 
 
 def create_medium_building() -> Building:
     """
-    Create a 20x20 building with 12 rooms, corridors, doors, objectives.
+    Create a 30x25 building with multiple wings, corridors, vents, and
+    alternate routes to make gameplay richer and more unpredictable.
 
     Layout key:
       # = wall, . = floor, - = corridor, D = door
       E = entry, X = extraction
+      S = hack_server, L = steal_loot, A = disable_alarm
+      C = disable_camera, V = vent (floor shortcut)
     """
     layout = [
-        "####################",
-        "#EE..#----#....#...#",
-        "#....#----#....#...#",
-        "#....D----D..S.#...#",
-        "#....#----#....#.X.#",
-        "######----######...#",
-        "#....D----D....#####",
-        "#....#----#....#...#",
-        "#..A.#----#....D...#",
-        "#....#----#....#...#",
-        "######----######...#",
-        "#....D----D....#####",
-        "#....#----#....#...#",
-        "#....#----#..L.D...#",
-        "#....#----#....#...#",
-        "######----######...#",
-        "#....D----#........#",
-        "#....#----#........#",
-        "#..E.#----#.......X#",
-        "####################",
+        "##############################",  # 0
+        "#E...#------#.....#....#....X#",  # 1
+        "#....#------#.....#....#.....#",  # 2
+        "#....D------D.....D....D.....#",  # 3
+        "#....#------#.....#....#.....#",  # 4
+        "######------###D########.....#",  # 5
+        "#....D------D.........#......#",  # 6
+        "#....#------#.........D......#",  # 7
+        "#..A.#------#.........#......#",  # 8
+        "#....#------#.........########",  # 9
+        "######------###D####D##.....##",  # 10
+        "#....D------D......#..#......#",  # 11
+        "#....#------#......D..D......#",  # 12
+        "#....#------#..S...#..#..C...#",  # 13
+        "#....#------#......#..#......#",  # 14
+        "######------###D####..####D###",  # 15
+        "#....D------D......#.........#",  # 16
+        "#....#------#......#.........#",  # 17
+        "#....#------#..L...D........X#",  # 18
+        "#....#------#......#.........#",  # 19
+        "######------###D####.........#",  # 20
+        "#....D------D.....#..........#",  # 21
+        "#....#------#.....#..........#",  # 22
+        "#.E..#------#.....D.........X#",  # 23
+        "##############################",  # 24
     ]
 
     char_map = {
         "#": CellType.WALL, ".": CellType.FLOOR, "-": CellType.CORRIDOR,
         "D": CellType.DOOR, "E": CellType.ENTRY, "X": CellType.EXTRACTION,
         "S": CellType.FLOOR, "L": CellType.FLOOR, "A": CellType.FLOOR,
+        "C": CellType.FLOOR, "V": CellType.FLOOR,
     }
     objective_map = {
         "S": ObjectiveType.HACK_SERVER,
         "L": ObjectiveType.STEAL_LOOT,
         "A": ObjectiveType.DISABLE_ALARM,
+        "C": ObjectiveType.DISABLE_CAMERA,
     }
 
     height = len(layout)
@@ -199,9 +226,10 @@ def create_medium_building() -> Building:
         grid.append(grid_row)
 
     cameras = [
-        Camera("cam_1", 10, 3, direction=3),
-        Camera("cam_2", 10, 8, direction=3),
-        Camera("cam_3", 14, 13, direction=1),
+        Camera("cam_1", 12, 6, direction=1),   # East-facing in upper wing
+        Camera("cam_2", 12, 12, direction=2),   # South-facing mid area
+        Camera("cam_3", 18, 11, direction=3),   # West-facing right wing
+        Camera("cam_4", 22, 18, direction=0),   # North-facing near loot
     ]
 
     return Building(width=width, height=height, grid=grid,

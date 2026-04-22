@@ -170,7 +170,10 @@ export default function CBSTreePanel() {
         letterSpacing: 2,
         borderBottom: '1px solid rgba(0, 212, 255, 0.15)',
       }}>
-        CBS Constraint Tree ({cbsEvents.length} steps)
+        <div>Path Planning — CBS Tree ({cbsEvents.length} steps)</div>
+        <div style={{ fontSize: 9, color: '#555', textTransform: 'none', letterSpacing: 0, marginTop: 2 }}>
+          Finding collision-free routes for your crew
+        </div>
       </div>
       <svg ref={svgRef} width={PANEL_W} height={PANEL_H - 28} />
     </div>

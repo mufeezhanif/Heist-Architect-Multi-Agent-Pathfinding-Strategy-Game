@@ -4,6 +4,8 @@ import { useRef, useMemo } from 'react'
 import * as THREE from 'three'
 import { useGameStore } from '../store/gameStore'
 import { createGame, connectWebSocket } from '../api/client'
+import { normalizeAgent, normalizeGuard, normalizeBuilding } from '../api/normalize'
+import HowToPlay from './HowToPlay'
 
 // ── Floating particles ──
 function Particles({ count = 120 }: { count?: number }) {
@@ -101,12 +103,31 @@ const s: Record<string, React.CSSProperties> = {
     color: '#888',
     letterSpacing: 4,
     textTransform: 'uppercase' as const,
-    marginBottom: 48,
+    marginBottom: 16,
+  },
+  pitch: {
+    fontSize: 13,
+    fontFamily: 'monospace',
+    color: '#aaa',
+    textAlign: 'center' as const,
+    maxWidth: 520,
+    lineHeight: 1.7,
+    marginBottom: 36,
   },
   btnGroup: {
     display: 'flex',
     gap: 20,
     pointerEvents: 'auto',
+    flexWrap: 'wrap' as const,
+    justifyContent: 'center',
+  },
+  secondaryBtnGroup: {
+    display: 'flex',
+    gap: 16,
+    pointerEvents: 'auto',
+    marginTop: 20,
+    flexWrap: 'wrap' as const,
+    justifyContent: 'center',
   },
   btn: {
     padding: '16px 40px',
@@ -140,20 +161,28 @@ export default function LandingPage() {
   const setBuilding = useGameStore((s) => s.setBuilding)
   const setCrew = useGameStore((s) => s.setCrew)
   const setGuards = useGameStore((s) => s.setGuards)
+  const setIsTutorial = useGameStore((s) => s.setIsTutorial)
+  const setTutorialStep = useGameStore((s) => s.setTutorialStep)
+  const setShowHowToPlay = useGameStore((s) => s.setShowHowToPlay)
+  const showHowToPlay = useGameStore((s) => s.showHowToPlay)
 
-  const startGame = async (mode: 'pvai' | 'spectator') => {
+  const startGame = async (mode: 'pvai' | 'spectator', tutorial = false) => {
     try {
       const data = await createGame(mode) as {
         game_id: string
-        building: unknown
-        state: { crew: unknown[]; guards: unknown[] }
+        building: Record<string, unknown>
+        state: { crew: Record<string, unknown>[]; guards: Record<string, unknown>[] }
       }
       setGameId(data.game_id)
       setGameMode(mode)
-      setBuilding(data.building as ReturnType<typeof useGameStore.getState>['building'] & object)
-      if (data.state?.crew) setCrew(data.state.crew as ReturnType<typeof useGameStore.getState>['crew'])
-      if (data.state?.guards) setGuards(data.state.guards as ReturnType<typeof useGameStore.getState>['guards'])
+      setBuilding(normalizeBuilding(data.building))
+      if (data.state?.crew) setCrew(data.state.crew.map(normalizeAgent))
+      if (data.state?.guards) setGuards(data.state.guards.map(normalizeGuard))
       connectWebSocket(data.game_id)
+      if (tutorial) {
+        setIsTutorial(true)
+        setTutorialStep(0)
+      }
       setScreen('game')
     } catch (err) {
       console.error('Failed to create game:', err)
@@ -176,6 +205,12 @@ export default function LandingPage() {
       <div style={s.overlay}>
         <div style={s.title}>HEIST ARCHITECT</div>
         <div style={s.subtitle}>Multi-Agent Pathfinding Strategy Game</div>
+
+        <div style={s.pitch}>
+          Command a crew of 3 specialists to pull off the perfect heist.
+          Navigate guards, cameras, and sensors in this turn-based strategy game powered by 5 AI algorithms.
+          Outsmart the AI Warden — or watch two AIs battle it out.
+        </div>
 
         <div style={s.btnGroup}>
           <button
@@ -203,9 +238,39 @@ export default function LandingPage() {
             Watch AI vs AI
           </button>
         </div>
+
+        <div style={s.secondaryBtnGroup}>
+          <button
+            style={{ ...s.btn, borderColor: '#00ff88', color: '#00ff88', padding: '12px 28px', fontSize: 12 }}
+            onClick={() => startGame('pvai', true)}
+            onMouseOver={(e) => {
+              e.currentTarget.style.background = 'rgba(0, 255, 136, 0.15)'
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.background = 'rgba(10, 10, 25, 0.7)'
+            }}
+          >
+            📖 Interactive Tutorial
+          </button>
+          <button
+            style={{ ...s.btn, borderColor: '#ffcc00', color: '#ffcc00', padding: '12px 28px', fontSize: 12 }}
+            onClick={() => setShowHowToPlay(true)}
+            onMouseOver={(e) => {
+              e.currentTarget.style.background = 'rgba(255, 204, 0, 0.15)'
+            }}
+            onMouseOut={(e) => {
+              e.currentTarget.style.background = 'rgba(10, 10, 25, 0.7)'
+            }}
+          >
+            ❓ How to Play
+          </button>
+        </div>
       </div>
 
       <div style={s.footer}>CS 2005 — Artificial Intelligence Lab Project</div>
+
+      {/* How to Play overlay */}
+      {showHowToPlay && <HowToPlay asModal />}
     </div>
   )
 }

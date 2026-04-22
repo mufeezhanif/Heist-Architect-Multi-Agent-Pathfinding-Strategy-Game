@@ -12,7 +12,7 @@ export interface Building {
   width: number
   height: number
   grid: Cell[][]
-  cameras: { id: string; pos: [number, number]; direction: string; vision: [number, number][] }[]
+  cameras: { id: string; pos: [number, number]; direction: string; active?: boolean; vision: [number, number][] }[]
   entries: [number, number][]
   extraction_points: [number, number][]
   objectives: { id: string; pos: [number, number]; label: string }[]
@@ -23,13 +23,19 @@ export interface Agent {
   role: string
   pos: [number, number]
   alive: boolean
+  abilities: string[]
+  ability_uses: Record<string, number>
+  ability_cooldowns: Record<string, number>
+  detected: boolean
 }
 
 export interface Guard {
   guard_id: string
   pos: [number, number]
   patrol: [number, number][]
+  patrol_type: string
   knocked_out: boolean
+  knocked_out_turns: number
   vision: [number, number][]
 }
 
@@ -43,13 +49,15 @@ export interface TurnResult {
   crew_positions: Record<string, [number, number]>
   guard_positions: Record<string, [number, number]>
   sensor_events: { sensor_id: string; event_type: string; pos: [number, number] }[]
-  detections: string[]
+  detections: { type: string; crew_id: string; x: number; y: number }[]
   objectives_completed: string[]
   bayesian_heatmap: Record<string, number>
   warden_action: Record<string, unknown> | null
   minimax_log: Record<string, unknown>[]
   game_status: string
   score: number
+  alert_level: number
+  event_log: string[]
 }
 
 export interface GameState {
@@ -78,6 +86,8 @@ export interface GameState {
   gameStatus: 'active' | 'won' | 'lost'
   score: number
   objectivesCompleted: string[]
+  alertLevel: number     // 0=green, 1=yellow, 2=red, 3=lockdown
+  eventLog: string[]
 
   // Visualizations
   bayesianHeatmap: Record<string, number>
@@ -94,6 +104,28 @@ export interface GameState {
   showBayesian: boolean
   showMinimax: boolean
   showAstarViz: boolean
+
+  // Move mode
+  moveMode: 'quick' | 'strategic'
+  pendingMoves: Record<string, [number, number]>   // agentId → destination (quick mode)
+  previewPaths: Record<string, [number, number][]>  // instant path preview before CBS
+
+  // Tutorial
+  isTutorial: boolean
+  tutorialStep: number
+
+  // Execution control
+  executionStep: number
+  executionTotal: number
+  executionMode: 'idle' | 'stepping' | 'playing' | 'paused' | 'done'
+  stepQueue: Record<string, unknown>[]    // queued step messages for manual stepping
+
+  // Narration
+  narrationEntries: { text: string; type: 'move' | 'sensor' | 'warden' | 'objective' | 'alert' | 'info' }[]
+
+  // Help
+  showHelp: boolean
+  showHowToPlay: boolean
 
   // Actions
   setScreen: (s: 'landing' | 'game') => void
@@ -113,39 +145,73 @@ export interface GameState {
   setTurnResult: (r: TurnResult) => void
   setBayesianHeatmap: (h: Record<string, number>) => void
   setMinimaxLog: (l: Record<string, unknown>[]) => void
+  setAlertLevel: (l: number) => void
+  addEventLog: (msg: string) => void
+  setEventLog: (log: string[]) => void
   setAiSpeed: (s: number) => void
   setAiRunning: (r: boolean) => void
   toggleViz: (name: 'showCBSTree' | 'showBayesian' | 'showMinimax' | 'showAstarViz') => void
+  setMoveMode: (m: 'quick' | 'strategic') => void
+  setPendingMove: (agentId: string, pos: [number, number]) => void
+  clearPendingMoves: () => void
+  setPreviewPaths: (p: Record<string, [number, number][]>) => void
+  setIsTutorial: (t: boolean) => void
+  setTutorialStep: (step: number) => void
+  advanceTutorial: () => void
+  setExecutionStep: (step: number) => void
+  setExecutionTotal: (total: number) => void
+  setExecutionMode: (mode: 'idle' | 'stepping' | 'playing' | 'paused' | 'done') => void
+  pushStepToQueue: (step: Record<string, unknown>) => void
+  popStepFromQueue: () => Record<string, unknown> | undefined
+  clearStepQueue: () => void
+  addNarration: (entry: { text: string; type: 'move' | 'sensor' | 'warden' | 'objective' | 'alert' | 'info' }) => void
+  clearNarration: () => void
+  setShowHelp: (show: boolean) => void
+  setShowHowToPlay: (show: boolean) => void
   reset: () => void
 }
 
 const initialState = {
   screen: 'landing' as const,
-  gameMode: null,
-  gameId: null,
+  gameMode: null as 'pvai' | 'spectator' | null,
+  gameId: null as string | null,
   connected: false,
-  building: null,
-  crew: [],
-  guards: [],
-  waypoints: {},
-  selectedAgent: null,
-  paths: {},
-  cbsEvents: [],
+  building: null as Building | null,
+  crew: [] as Agent[],
+  guards: [] as Guard[],
+  waypoints: {} as Record<string, [number, number]>,
+  selectedAgent: null as string | null,
+  paths: {} as Record<string, [number, number][]>,
+  cbsEvents: [] as CBSEvent[],
   planning: false,
   turn: 0,
   gameStatus: 'active' as const,
   score: 0,
-  objectivesCompleted: [],
-  bayesianHeatmap: {},
-  minimaxLog: [],
-  sensorEvents: [],
-  turnResult: null,
+  objectivesCompleted: [] as string[],
+  alertLevel: 0,
+  eventLog: [] as string[],
+  bayesianHeatmap: {} as Record<string, number>,
+  minimaxLog: [] as Record<string, unknown>[],
+  sensorEvents: [] as { sensor_id: string; event_type: string; pos: [number, number] }[],
+  turnResult: null as TurnResult | null,
   aiSpeed: 1,
   aiRunning: false,
   showCBSTree: true,
   showBayesian: true,
   showMinimax: false,
   showAstarViz: true,
+  moveMode: 'quick' as const,
+  pendingMoves: {} as Record<string, [number, number]>,
+  previewPaths: {} as Record<string, [number, number][]>,
+  isTutorial: false,
+  tutorialStep: 0,
+  executionStep: 0,
+  executionTotal: 0,
+  executionMode: 'idle' as const,
+  stepQueue: [] as Record<string, unknown>[],
+  narrationEntries: [] as { text: string; type: 'move' | 'sensor' | 'warden' | 'objective' | 'alert' | 'info' }[],
+  showHelp: false,
+  showHowToPlay: false,
 }
 
 export const useGameStore = create<GameState>((set) => ({
@@ -170,17 +236,46 @@ export const useGameStore = create<GameState>((set) => ({
     set({
       turnResult: r,
       turn: r.turn,
-      gameStatus: r.game_status as 'active' | 'won' | 'lost',
+      gameStatus: (r.game_status === 'planning' ? 'active' : r.game_status) as 'active' | 'won' | 'lost',
       score: r.score,
       sensorEvents: r.sensor_events,
       bayesianHeatmap: r.bayesian_heatmap,
       minimaxLog: r.minimax_log,
       objectivesCompleted: r.objectives_completed,
+      alertLevel: r.alert_level,
+      eventLog: r.event_log || [],
     }),
   setBayesianHeatmap: (h) => set({ bayesianHeatmap: h }),
   setMinimaxLog: (l) => set({ minimaxLog: l }),
+  setAlertLevel: (l) => set({ alertLevel: l }),
+  addEventLog: (msg) => set((s) => ({ eventLog: [...s.eventLog.slice(-19), msg] })),
+  setEventLog: (log) => set({ eventLog: log }),
   setAiSpeed: (s) => set({ aiSpeed: s }),
   setAiRunning: (r) => set({ aiRunning: r }),
   toggleViz: (name) => set((s) => ({ [name]: !s[name] })),
+  setMoveMode: (m) => set({ moveMode: m }),
+  setPendingMove: (agentId, pos) =>
+    set((s) => ({ pendingMoves: { ...s.pendingMoves, [agentId]: pos } })),
+  clearPendingMoves: () => set({ pendingMoves: {} }),
+  setPreviewPaths: (p) => set({ previewPaths: p }),
+  setIsTutorial: (t) => set({ isTutorial: t }),
+  setTutorialStep: (step) => set({ tutorialStep: step }),
+  advanceTutorial: () => set((s) => ({ tutorialStep: s.tutorialStep + 1 })),
+  setExecutionStep: (step) => set({ executionStep: step }),
+  setExecutionTotal: (total) => set({ executionTotal: total }),
+  setExecutionMode: (mode) => set({ executionMode: mode }),
+  pushStepToQueue: (step) => set((s) => ({ stepQueue: [...s.stepQueue, step] })),
+  popStepFromQueue: () => {
+    const s = useGameStore.getState()
+    const [first, ...rest] = s.stepQueue
+    set({ stepQueue: rest, executionStep: s.executionStep + 1 })
+    return first
+  },
+  clearStepQueue: () => set({ stepQueue: [], executionStep: 0, executionTotal: 0, executionMode: 'idle' }),
+  addNarration: (entry) =>
+    set((s) => ({ narrationEntries: [...s.narrationEntries.slice(-29), entry] })),
+  clearNarration: () => set({ narrationEntries: [] }),
+  setShowHelp: (show) => set({ showHelp: show }),
+  setShowHowToPlay: (show) => set({ showHowToPlay: show }),
   reset: () => set(initialState),
 }))

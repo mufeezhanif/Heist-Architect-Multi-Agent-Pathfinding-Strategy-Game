@@ -294,18 +294,10 @@ def get_top_cells(belief: BeliefGrid, n: int = 5) -> list[dict]:
 
 
 def belief_to_dict(belief: BeliefGrid) -> dict:
-    """Serialize belief grid for frontend heatmap rendering."""
-    cells = []
+    """Serialize belief grid as flat {x,y: prob} for frontend heatmap."""
+    result = {}
     for y in range(belief.height):
         for x in range(belief.width):
             if belief.walkable_mask[y, x] and belief.grid[y, x] > 0.001:
-                cells.append({
-                    "x": x, "y": y,
-                    "prob": round(float(belief.grid[y, x]), 4),
-                })
-    return {
-        "width": belief.width,
-        "height": belief.height,
-        "cells": cells,
-        "top_cells": get_top_cells(belief),
-    }
+                result[f"{x},{y}"] = round(float(belief.grid[y, x]), 4)
+    return result
