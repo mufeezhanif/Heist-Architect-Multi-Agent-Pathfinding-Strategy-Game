@@ -1,24 +1,27 @@
 /* ── Controls — Agent selector + Abilities + Plan/Execute + Quick/Strategic toggle ── */
 import { useGameStore } from '../store/gameStore'
 import { sendWS } from '../api/client'
+import { motion } from 'framer-motion'
+import { Zap, Map, MonitorOff, Key, Frown, FastForward, BrainCircuit, Play } from 'lucide-react'
 
 const ROLE_COLORS: Record<string, string> = {
-  hacker: '#00ff88',
-  thief: '#e94560',
-  muscle: '#ff6b35',
+  hacker: '#00ff66',
+  thief: '#ff003c',
+  muscle: '#fcee0a',
 }
 
-const ROLE_ICONS: Record<string, string> = {
-  hacker: '�',
-  thief: '🦊',
-  muscle: '💪',
+const ABILITY_ICONS: Record<string, React.ReactNode> = {
+  disable_device: <MonitorOff size={14} />,
+  pick_lock: <Key size={14} />,
+  knock_out: <Frown size={14} />,
+  sprint: <FastForward size={14} />,
 }
 
 const ABILITY_LABELS: Record<string, string> = {
-  disable_device: '⚡ Hack',
-  pick_lock: '🔓 Pick',
-  knock_out: '👊 KO',
-  sprint: '💨 Sprint',
+  disable_device: 'Hack',
+  pick_lock: 'Pick',
+  knock_out: 'KO',
+  sprint: 'Sprint',
 }
 
 const ABILITY_TOOLTIPS: Record<string, string> = {
@@ -31,103 +34,124 @@ const ABILITY_TOOLTIPS: Record<string, string> = {
 const s: Record<string, React.CSSProperties> = {
   panel: {
     position: 'absolute',
-    bottom: 16,
+    bottom: '24px',
     left: '50%',
     transform: 'translateX(-50%)',
     display: 'flex',
-    gap: 8,
+    gap: '16px',
     alignItems: 'center',
-    background: 'rgba(10, 10, 25, 0.92)',
-    border: '1px solid rgba(0, 212, 255, 0.25)',
-    borderRadius: 10,
-    padding: '10px 16px',
-    backdropFilter: 'blur(10px)',
+    background: 'rgba(5, 5, 8, 0.85)',
+    border: '1px solid rgba(0, 240, 255, 0.3)',
+    borderRadius: '16px',
+    padding: '16px 24px',
+    backdropFilter: 'blur(16px)',
     zIndex: 20,
-    flexWrap: 'wrap' as const,
+    flexWrap: 'wrap',
     justifyContent: 'center',
     maxWidth: '95vw',
+    boxShadow: '0 10px 40px rgba(0,0,0,0.5), inset 0 0 20px rgba(0,240,255,0.05)',
   },
   modeToggle: {
     display: 'flex',
-    gap: 0,
-    borderRadius: 6,
+    gap: '4px',
+    borderRadius: '8px',
     overflow: 'hidden',
-    border: '1px solid rgba(0, 212, 255, 0.25)',
+    border: '1px solid var(--glass-border)',
+    background: 'rgba(0,0,0,0.3)',
+    padding: '4px',
   },
   modeBtn: {
-    padding: '6px 12px',
+    padding: '8px 16px',
     border: 'none',
+    borderRadius: '6px',
     cursor: 'pointer',
     fontFamily: 'monospace',
-    fontSize: 10,
+    fontSize: '0.8rem',
     fontWeight: 700,
-    textTransform: 'uppercase' as const,
-    letterSpacing: 1,
-    transition: 'all 0.15s',
+    textTransform: 'uppercase',
+    letterSpacing: '0.1em',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px',
   },
   agentBtn: {
-    padding: '8px 14px',
+    padding: '10px 20px',
     border: '2px solid transparent',
-    borderRadius: 6,
+    borderRadius: '10px',
     cursor: 'pointer',
-    fontFamily: 'monospace',
-    fontSize: 12,
+    fontFamily: 'Space Grotesk, sans-serif',
+    fontSize: '1rem',
     fontWeight: 700,
-    textTransform: 'uppercase' as const,
-    letterSpacing: 1,
-    transition: 'all 0.15s',
+    textTransform: 'uppercase',
+    letterSpacing: '0.1em',
     background: 'transparent',
+    transition: 'all 0.2s',
   },
   actionBtn: {
-    padding: '10px 18px',
+    padding: '12px 24px',
     border: 'none',
-    borderRadius: 6,
+    borderRadius: '8px',
     cursor: 'pointer',
-    fontFamily: 'monospace',
-    fontSize: 13,
+    fontFamily: 'Space Grotesk, sans-serif',
+    fontSize: '1rem',
     fontWeight: 700,
-    textTransform: 'uppercase' as const,
-    letterSpacing: 1,
+    textTransform: 'uppercase',
+    letterSpacing: '0.1em',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    boxShadow: '0 4px 15px rgba(0,0,0,0.3)',
   },
   abilityBtn: {
-    padding: '5px 10px',
+    padding: '6px 12px',
     border: '1px solid',
-    borderRadius: 4,
+    borderRadius: '6px',
     cursor: 'pointer',
     fontFamily: 'monospace',
-    fontSize: 10,
+    fontSize: '0.75rem',
     fontWeight: 600,
-    background: 'rgba(0,0,0,0.3)',
-    transition: 'all 0.15s',
+    background: 'rgba(0,0,0,0.4)',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '4px',
+    textTransform: 'uppercase',
   },
   waypointTag: {
-    fontSize: 9,
-    color: '#aaa',
-    marginTop: 2,
+    fontSize: '0.75rem',
+    fontFamily: 'monospace',
+    color: '#8892b0',
+    marginTop: '4px',
+    background: 'rgba(0,0,0,0.4)',
+    padding: '2px 8px',
+    borderRadius: '4px',
   },
   divider: {
-    width: 1,
-    height: 30,
-    background: 'rgba(0, 212, 255, 0.2)',
-    margin: '0 4px',
+    width: '1px',
+    height: '40px',
+    background: 'linear-gradient(to bottom, transparent, rgba(0, 240, 255, 0.4), transparent)',
+    margin: '0 8px',
   },
   agentCard: {
     display: 'flex',
-    flexDirection: 'column' as const,
+    flexDirection: 'column',
     alignItems: 'center',
-    gap: 4,
+    gap: '6px',
   },
   abilityRow: {
     display: 'flex',
-    gap: 3,
+    gap: '6px',
   },
   hint: {
-    fontSize: 10,
+    fontSize: '0.85rem',
     fontFamily: 'monospace',
-    color: '#555',
-    textAlign: 'center' as const,
-    maxWidth: 300,
+    color: '#a8b2d1',
+    textAlign: 'center',
+    maxWidth: '280px',
     lineHeight: 1.4,
+    padding: '8px 16px',
+    background: 'rgba(10, 25, 47, 0.6)',
+    borderRadius: '8px',
+    border: '1px solid rgba(168, 178, 209, 0.2)',
   },
 }
 
@@ -169,18 +193,6 @@ export default function Controls() {
     if (isTutorial && tutorialStep === 7) advanceTutorial()
   }
 
-  const handleEndTurn = () => {
-    // Quick mode: use pending moves as waypoints, auto plan + execute
-    if (!hasPendingMoves && !hasWaypoints) return
-    const wp = hasPendingMoves ? pendingMoves : waypoints
-    setPlanning(true)
-    clearCBSEvents()
-    clearNarration()
-    sendWS({ action: 'plan', waypoints: wp })
-    // Execute will happen after plan_complete via auto-execute flag
-    useGameStore.setState({ _autoExecuteAfterPlan: true } as Record<string, unknown>)
-  }
-
   const handleAbility = (agentId: string, ability: string) => {
     sendWS({ action: 'ability', agent_id: agentId, ability })
   }
@@ -198,46 +210,53 @@ export default function Controls() {
   let hintText = ''
   if (gameMode === 'pvai') {
     if (!selectedAgent && !hasWaypoints && !hasPendingMoves) {
-      hintText = '← Select an agent, then click the map to move them'
+      hintText = '← Select an agent, then click the map'
     } else if (selectedAgent && !hasWaypoints && !hasPendingMoves && !planning) {
       hintText = moveMode === 'quick'
-        ? 'Click anywhere on the map — agent will move there automatically!'
+        ? 'Click map — agent will move automatically!'
         : 'Click on the map to set a destination'
     } else if (planning) {
-      hintText = '⏳ AI is computing paths and executing movement...'
+      hintText = '⏳ AI is computing paths...'
     } else if (moveMode === 'strategic' && hasWaypoints && !hasPaths) {
-      hintText = 'Click PLAN to compute safe paths, then EXECUTE'
+      hintText = 'Click PLAN to compute paths'
     } else if (moveMode === 'strategic' && hasPaths) {
-      hintText = 'Paths ready! Click EXECUTE to move your crew'
+      hintText = 'Paths ready! Click EXECUTE'
     }
   }
 
   return (
-    <div style={s.panel}>
+    <motion.div 
+      style={s.panel}
+      initial={{ y: 100, opacity: 0, x: '-50%' }}
+      animate={{ y: 0, opacity: 1, x: '-50%' }}
+      transition={{ type: 'spring', damping: 20, stiffness: 100 }}
+    >
       {gameMode === 'pvai' && (
         <>
           {/* Mode toggle */}
           <div style={s.modeToggle} title="Quick Move: click & move. Strategic Plan: set waypoints, plan, execute.">
-            <button
+            <motion.button
+              whileTap={{ scale: 0.95 }}
               style={{
                 ...s.modeBtn,
-                background: moveMode === 'quick' ? 'rgba(0, 212, 255, 0.2)' : 'transparent',
-                color: moveMode === 'quick' ? '#00d4ff' : '#555',
+                background: moveMode === 'quick' ? 'var(--neon-cyan)' : 'transparent',
+                color: moveMode === 'quick' ? '#050508' : '#8892b0',
               }}
               onClick={() => setMoveMode('quick')}
             >
-              ⚡ Quick
-            </button>
-            <button
+              <Zap size={14} /> Quick
+            </motion.button>
+            <motion.button
+              whileTap={{ scale: 0.95 }}
               style={{
                 ...s.modeBtn,
-                background: moveMode === 'strategic' ? 'rgba(255, 204, 0, 0.2)' : 'transparent',
-                color: moveMode === 'strategic' ? '#ffcc00' : '#555',
+                background: moveMode === 'strategic' ? 'var(--neon-cyan)' : 'transparent',
+                color: moveMode === 'strategic' ? '#050508' : '#8892b0',
               }}
               onClick={() => setMoveMode('strategic')}
             >
-              🎯 Strategic
-            </button>
+              <Map size={14} /> Strategic
+            </motion.button>
           </div>
 
           <div style={s.divider} />
@@ -245,7 +264,6 @@ export default function Controls() {
           {/* Agent cards with abilities */}
           {crew.map((agent) => {
             const color = ROLE_COLORS[agent.role] || '#fff'
-            const icon = ROLE_ICONS[agent.role] || ''
             const isSelected = selectedAgent === agent.agent_id
             const wp = waypoints[agent.agent_id]
             const pm = pendingMoves[agent.agent_id]
@@ -253,7 +271,9 @@ export default function Controls() {
 
             return (
               <div key={agent.agent_id} style={s.agentCard}>
-                <button
+                <motion.button
+                  whileHover={{ scale: agent.alive ? 1.05 : 1 }}
+                  whileTap={{ scale: agent.alive ? 0.95 : 1 }}
                   onClick={() => {
                     setSelectedAgent(isSelected ? null : agent.agent_id)
                     if (isTutorial && tutorialStep === 2) advanceTutorial()
@@ -261,18 +281,19 @@ export default function Controls() {
                   title={`Select ${agent.role} — click then click the map to set destination`}
                   style={{
                     ...s.agentBtn,
-                    color,
-                    background: isSelected ? `${color}22` : 'transparent',
-                    borderColor: isSelected ? color : `${color}44`,
-                    opacity: agent.alive ? 1 : 0.3,
+                    color: isSelected ? '#050508' : color,
+                    background: isSelected ? color : 'transparent',
+                    borderColor: color,
+                    opacity: agent.alive ? 1 : 0.4,
+                    boxShadow: isSelected ? `0 0 15px ${color}` : 'none',
                   }}
                 >
-                  {icon} {agent.role}
-                </button>
+                  {agent.role}
+                </motion.button>
                 {destination && (
-                  <div style={s.waypointTag}>
+                  <motion.div initial={{ opacity: 0, y: -5 }} animate={{ opacity: 1, y: 0 }} style={s.waypointTag}>
                     → ({destination[0]}, {destination[1]})
-                  </div>
+                  </motion.div>
                 )}
 
                 {/* Ability buttons */}
@@ -283,7 +304,9 @@ export default function Controls() {
                       const cd = agent.ability_cooldowns?.[ab] ?? 0
                       const canUse = uses > 0 && cd <= 0
                       return (
-                        <button
+                        <motion.button
+                          whileHover={canUse ? { scale: 1.1, backgroundColor: `${color}22` } : {}}
+                          whileTap={canUse ? { scale: 0.9 } : {}}
                           key={ab}
                           onClick={() => canUse && handleAbility(agent.agent_id, ab)}
                           disabled={!canUse}
@@ -295,9 +318,10 @@ export default function Controls() {
                             cursor: canUse ? 'pointer' : 'not-allowed',
                           }}
                         >
+                          {ABILITY_ICONS[ab]}
                           {ABILITY_LABELS[ab] || ab}
-                          {uses > 0 && <span style={{ fontSize: 8, marginLeft: 2 }}>×{uses}</span>}
-                        </button>
+                          {uses > 0 && <span style={{ fontSize: '0.65rem', marginLeft: 2, opacity: 0.8 }}>×{uses}</span>}
+                        </motion.button>
                       )
                     })}
                   </div>
@@ -310,61 +334,75 @@ export default function Controls() {
 
           {/* Action buttons differ by mode */}
           {moveMode === 'quick' ? (
-            /* Quick mode: clicking map auto-executes — show status */
             planning ? (
-              <div style={{ ...s.actionBtn, background: '#333', color: '#00d4ff' }}>
-                ⏳ Moving...
-              </div>
+              <motion.div 
+                animate={{ opacity: [0.5, 1, 0.5] }}
+                transition={{ repeat: Infinity, duration: 1 }}
+                style={{ ...s.actionBtn, background: '#112240', color: 'var(--neon-cyan)' }}
+              >
+                <BrainCircuit size={18} /> Moving...
+              </motion.div>
             ) : null
           ) : (
-            /* Strategic mode: Plan + Execute */
             <>
-              <button
+              <motion.button
+                whileHover={hasWaypoints && !planning ? { scale: 1.05, boxShadow: '0 0 20px var(--neon-cyan)' } : {}}
+                whileTap={hasWaypoints && !planning ? { scale: 0.95 } : {}}
                 onClick={handlePlan}
                 disabled={!hasWaypoints || planning}
-                title="Run CBS algorithm to compute collision-free paths for all agents"
+                title="Run CBS algorithm to compute collision-free paths"
                 style={{
                   ...s.actionBtn,
-                  background: hasWaypoints && !planning ? '#00d4ff' : '#333',
-                  color: hasWaypoints && !planning ? '#000' : '#666',
+                  background: hasWaypoints && !planning ? 'rgba(0, 240, 255, 0.15)' : '#112240',
+                  color: hasWaypoints && !planning ? 'var(--neon-cyan)' : '#495670',
+                  border: `1px solid ${hasWaypoints && !planning ? 'var(--neon-cyan)' : '#233554'}`,
                 }}
               >
-                {planning ? 'Planning…' : 'Plan (CBS)'}
-              </button>
-              <button
+                <BrainCircuit size={18} /> {planning ? 'Planning…' : 'Plan'}
+              </motion.button>
+              <motion.button
+                whileHover={hasPaths ? { scale: 1.05, boxShadow: '0 0 20px var(--neon-green)' } : {}}
+                whileTap={hasPaths ? { scale: 0.95 } : {}}
                 onClick={handleExecute}
                 disabled={!hasPaths}
-                title="Move crew along planned paths — guards and sensors will react"
+                title="Move crew along planned paths"
                 style={{
                   ...s.actionBtn,
-                  background: hasPaths ? '#00ff88' : '#333',
-                  color: hasPaths ? '#000' : '#666',
+                  background: hasPaths ? 'rgba(0, 255, 102, 0.15)' : '#112240',
+                  color: hasPaths ? 'var(--neon-green)' : '#495670',
+                  border: `1px solid ${hasPaths ? 'var(--neon-green)' : '#233554'}`,
                 }}
               >
-                Execute ▶
-              </button>
+                <Play size={18} /> Execute
+              </motion.button>
             </>
           )}
 
           {/* Contextual hint */}
-          {hintText && <div style={s.hint}>{hintText}</div>}
+          {hintText && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} style={s.hint}>
+              {hintText}
+            </motion.div>
+          )}
         </>
       )}
 
       {gameMode === 'spectator' && (
-        <button
+        <motion.button
+          whileHover={!planning ? { scale: 1.05, boxShadow: '0 0 20px var(--neon-magenta)' } : {}}
+          whileTap={!planning ? { scale: 0.95 } : {}}
           onClick={handleAIStep}
           disabled={planning}
-          title="Let the AI plan and execute one turn"
           style={{
             ...s.actionBtn,
-            background: !planning ? '#e94560' : '#333',
-            color: !planning ? '#fff' : '#666',
+            background: !planning ? 'rgba(255, 0, 60, 0.15)' : '#112240',
+            color: !planning ? 'var(--neon-magenta)' : '#495670',
+            border: `1px solid ${!planning ? 'var(--neon-magenta)' : '#233554'}`,
           }}
         >
-          {planning ? 'AI Thinking…' : 'AI Step ▶'}
-        </button>
+          <BrainCircuit size={18} /> {planning ? 'AI Thinking…' : 'AI Step'}
+        </motion.button>
       )}
-    </div>
+    </motion.div>
   )
 }

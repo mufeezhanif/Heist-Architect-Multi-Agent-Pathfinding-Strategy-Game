@@ -90,7 +90,7 @@ export default function CBSTreePanel() {
         .attr('x', PANEL_W / 2)
         .attr('y', PANEL_H / 2)
         .attr('text-anchor', 'middle')
-        .attr('fill', '#555')
+        .attr('fill', '#8892b0')
         .attr('font-family', 'monospace')
         .attr('font-size', 12)
         .text('CBS tree will appear during planning…')
@@ -112,15 +112,15 @@ export default function CBSTreePanel() {
       .attr('y1', (d) => d.source.y)
       .attr('x2', (d) => d.target.x)
       .attr('y2', (d) => d.target.y)
-      .attr('stroke', '#333')
-      .attr('stroke-width', 1)
+      .attr('stroke', 'rgba(0, 240, 255, 0.2)')
+      .attr('stroke-width', 1.5)
 
     // Nodes
     const statusColor: Record<string, string> = {
-      exploring: '#00d4ff',
-      conflict: '#e94560',
-      resolved: '#00ff88',
-      pruned: '#444',
+      exploring: 'var(--neon-cyan)',
+      conflict: 'var(--neon-magenta)',
+      resolved: 'var(--neon-green)',
+      pruned: '#495670',
     }
 
     const nodeGroups = g.selectAll('.node')
@@ -132,13 +132,13 @@ export default function CBSTreePanel() {
     nodeGroups.append('circle')
       .attr('r', 6)
       .attr('fill', (d) => statusColor[d.data.status] || '#555')
-      .attr('stroke', (d) => d.data.status === 'resolved' ? '#00ff88' : 'none')
+      .attr('stroke', (d) => d.data.status === 'resolved' ? 'var(--neon-green)' : 'none')
       .attr('stroke-width', 2)
 
     nodeGroups.append('text')
       .attr('dy', -10)
       .attr('text-anchor', 'middle')
-      .attr('fill', '#aaa')
+      .attr('fill', '#a8b2d1')
       .attr('font-size', 9)
       .attr('font-family', 'monospace')
       .text((d) => d.data.label)
@@ -151,31 +151,30 @@ export default function CBSTreePanel() {
     <div style={{
       position: 'absolute',
       bottom: 80,
-      left: 12,
+      left: 20,
       width: PANEL_W,
       height: PANEL_H,
-      background: 'rgba(10, 10, 25, 0.9)',
-      border: '1px solid rgba(0, 212, 255, 0.25)',
-      borderRadius: 8,
-      overflow: 'hidden',
       zIndex: 15,
-      backdropFilter: 'blur(8px)',
-    }}>
+    }} className="glass-panel">
       <div style={{
-        padding: '6px 12px',
-        fontSize: 10,
-        fontFamily: 'monospace',
-        color: '#00d4ff',
+        padding: '12px',
+        fontSize: '0.85rem',
+        fontFamily: 'Space Grotesk, sans-serif',
+        fontWeight: 700,
+        color: 'var(--neon-cyan)',
         textTransform: 'uppercase',
-        letterSpacing: 2,
-        borderBottom: '1px solid rgba(0, 212, 255, 0.15)',
+        letterSpacing: '0.1em',
+        borderBottom: '1px solid var(--glass-border)',
       }}>
-        <div>Path Planning — CBS Tree ({cbsEvents.length} steps)</div>
-        <div style={{ fontSize: 9, color: '#555', textTransform: 'none', letterSpacing: 0, marginTop: 2 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          Path Planning — CBS Tree 
+          <span style={{ fontSize: '0.7rem', opacity: 0.7 }}>({cbsEvents.length} steps)</span>
+        </div>
+        <div style={{ fontSize: '0.7rem', color: '#8892b0', textTransform: 'none', letterSpacing: 0, marginTop: 4, fontWeight: 400 }}>
           Finding collision-free routes for your crew
         </div>
       </div>
-      <svg ref={svgRef} width={PANEL_W} height={PANEL_H - 28} />
+      <svg ref={svgRef} width={PANEL_W} height={PANEL_H - 45} />
     </div>
   )
 }

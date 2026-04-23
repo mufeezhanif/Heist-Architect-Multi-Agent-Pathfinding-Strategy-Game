@@ -1,65 +1,72 @@
 /* ── HUD — heads-up display overlay with alert + event log ── */
 import { useGameStore } from '../store/gameStore'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Clock, Star, Activity, CheckSquare, AlertTriangle, Terminal } from 'lucide-react'
 
-const ALERT_COLORS = ['#00ff88', '#ffcc00', '#ff4444', '#ff0055']
+const ALERT_COLORS = ['#00ff66', '#fcee0a', '#ff003c', '#ff003c']
 const ALERT_LABELS = ['GREEN', 'YELLOW', 'RED', 'LOCKDOWN']
 
-const styles: Record<string, React.CSSProperties> = {
+const s: Record<string, React.CSSProperties> = {
   container: {
     position: 'absolute',
-    top: 12,
-    left: 12,
+    top: '20px',
+    left: '20px',
     display: 'flex',
     flexDirection: 'column',
-    gap: 8,
+    gap: '12px',
     pointerEvents: 'none',
     zIndex: 10,
-    maxWidth: 280,
+    width: '320px',
   },
   badge: {
-    background: 'rgba(10, 10, 25, 0.85)',
-    border: '1px solid rgba(0, 212, 255, 0.3)',
-    borderRadius: 6,
-    padding: '6px 14px',
-    fontSize: 13,
-    fontFamily: 'monospace',
-    color: '#e0e0e0',
-    backdropFilter: 'blur(8px)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: '10px 16px',
   },
   label: {
-    color: '#00d4ff',
-    marginRight: 8,
-    fontSize: 10,
-    textTransform: 'uppercase' as const,
-    letterSpacing: 1,
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    color: 'var(--neon-cyan)',
+    fontSize: '0.8rem',
+    textTransform: 'uppercase',
+    letterSpacing: '0.1em',
+    fontWeight: 600,
   },
-  statusWon: { color: '#00ff88' },
-  statusLost: { color: '#ff0055' },
-  statusActive: { color: '#00d4ff' },
+  value: {
+    fontFamily: 'monospace',
+    fontSize: '1.2rem',
+    fontWeight: 800,
+    textShadow: '0 0 10px rgba(255,255,255,0.3)',
+  },
+  statusWon: { color: 'var(--neon-green)', textShadow: '0 0 10px var(--neon-green)' },
+  statusLost: { color: 'var(--neon-magenta)', textShadow: '0 0 10px var(--neon-magenta)' },
+  statusActive: { color: 'var(--neon-cyan)', textShadow: '0 0 10px var(--neon-cyan)' },
   eventLog: {
-    background: 'rgba(10, 10, 25, 0.85)',
-    border: '1px solid rgba(0, 212, 255, 0.2)',
-    borderRadius: 6,
-    padding: '8px 10px',
-    maxHeight: 150,
-    overflowY: 'auto' as const,
-    backdropFilter: 'blur(8px)',
-    pointerEvents: 'auto' as const,
+    marginTop: '8px',
+    padding: '12px',
+    maxHeight: '200px',
+    overflowY: 'auto',
+    pointerEvents: 'auto',
   },
   logEntry: {
-    fontSize: 10,
+    fontSize: '0.85rem',
     fontFamily: 'monospace',
-    color: '#aaa',
-    padding: '2px 0',
-    borderBottom: '1px solid rgba(255,255,255,0.05)',
+    padding: '6px 0',
+    borderBottom: '1px solid var(--glass-border)',
+    lineHeight: 1.4,
   },
   logTitle: {
-    fontSize: 10,
-    fontFamily: 'monospace',
-    color: '#00d4ff',
-    letterSpacing: 1,
-    textTransform: 'uppercase' as const,
-    marginBottom: 4,
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px',
+    fontSize: '0.8rem',
+    color: 'var(--neon-cyan)',
+    letterSpacing: '0.1em',
+    textTransform: 'uppercase',
+    marginBottom: '8px',
+    fontWeight: 600,
   },
 }
 
@@ -74,56 +81,103 @@ export default function HUD() {
   const eventLog = useGameStore((s) => s.eventLog)
 
   const totalObjectives = building?.objectives.length || 0
-  const alertColor = ALERT_COLORS[alertLevel] || '#00ff88'
+  const alertColor = ALERT_COLORS[alertLevel] || 'var(--neon-green)'
   const alertLabel = ALERT_LABELS[alertLevel] || 'GREEN'
 
   const statusStyle =
-    gameStatus === 'won' ? styles.statusWon : gameStatus === 'lost' ? styles.statusLost : styles.statusActive
+    gameStatus === 'won' ? s.statusWon : gameStatus === 'lost' ? s.statusLost : s.statusActive
+
+  const badgeVariants = {
+    hidden: { opacity: 0, x: -20 },
+    visible: (i: number) => ({
+      opacity: 1,
+      x: 0,
+      transition: { delay: i * 0.1, duration: 0.5, ease: "easeOut" }
+    })
+  }
 
   return (
-    <div style={styles.container}>
-      <div style={styles.badge} title="Current turn number out of 50 maximum turns">
-        <span style={styles.label}>Turn</span>
-        {turn} / {maxTurns}
-      </div>
-      <div style={styles.badge} title="Your heist score — higher is better, bonus for speed">
-        <span style={styles.label}>Score</span>
-        {score}
-      </div>
-      <div style={styles.badge} title="Game status — ACTIVE means the heist is in progress">
-        <span style={styles.label}>Status</span>
-        <span style={statusStyle}>{gameStatus.toUpperCase()}</span>
-      </div>
-      <div style={styles.badge} title="Objectives completed — complete ALL to unlock extraction">
-        <span style={styles.label}>Objectives</span>
-        {objectivesCompleted.length}/{totalObjectives}
-      </div>
-      <div style={{
-        ...styles.badge,
-        borderColor: alertColor + '66',
-        color: alertColor,
-      }} title="Alert level — GREEN=safe, YELLOW=suspicious, RED=converging, LOCKDOWN=next detection loses the game">
-        <span style={styles.label}>Alert</span>
-        <span style={{ fontWeight: 700 }}>{alertLabel}</span>
-      </div>
+    <div style={s.container}>
+      <motion.div custom={0} initial="hidden" animate="visible" variants={badgeVariants} className="glass-panel" style={s.badge} title="Current turn number out of 50 maximum turns">
+        <span style={s.label}><Clock size={16} /> Turn</span>
+        <span style={s.value}>{turn} <span style={{fontSize: '0.8rem', opacity: 0.6}}>/ {maxTurns}</span></span>
+      </motion.div>
+      
+      <motion.div custom={1} initial="hidden" animate="visible" variants={badgeVariants} className="glass-panel" style={s.badge} title="Your heist score — higher is better, bonus for speed">
+        <span style={s.label}><Star size={16} /> Score</span>
+        <motion.span 
+          style={s.value}
+          key={score}
+          initial={{ scale: 1.5, color: 'var(--neon-yellow)' }}
+          animate={{ scale: 1, color: '#fff' }}
+          transition={{ duration: 0.3 }}
+        >
+          {score}
+        </motion.span>
+      </motion.div>
+
+      <motion.div custom={2} initial="hidden" animate="visible" variants={badgeVariants} className="glass-panel" style={s.badge} title="Game status — ACTIVE means the heist is in progress">
+        <span style={s.label}><Activity size={16} /> Status</span>
+        <span style={{...s.value, ...statusStyle}}>{gameStatus.toUpperCase()}</span>
+      </motion.div>
+
+      <motion.div custom={3} initial="hidden" animate="visible" variants={badgeVariants} className="glass-panel" style={s.badge} title="Objectives completed — complete ALL to unlock extraction">
+        <span style={s.label}><CheckSquare size={16} /> Objectives</span>
+        <span style={s.value}>{objectivesCompleted.length} <span style={{fontSize: '0.8rem', opacity: 0.6}}>/ {totalObjectives}</span></span>
+      </motion.div>
+
+      <motion.div 
+        custom={4} initial="hidden" animate="visible" variants={badgeVariants} 
+        className="glass-panel" 
+        style={{
+          ...s.badge,
+          borderLeft: `4px solid ${alertColor}`,
+          boxShadow: alertLevel > 0 ? `0 0 15px ${alertColor}40` : 'none'
+        }} 
+        title="Alert level — GREEN=safe, YELLOW=suspicious, RED=converging, LOCKDOWN=next detection loses the game"
+      >
+        <span style={{...s.label, color: alertColor}}><AlertTriangle size={16} /> Alert</span>
+        <motion.span 
+          key={alertLevel}
+          initial={{ scale: 1.2 }}
+          animate={{ scale: 1 }}
+          style={{...s.value, color: alertColor, textShadow: `0 0 10px ${alertColor}`}}
+        >
+          {alertLabel}
+        </motion.span>
+      </motion.div>
 
       {/* Event log */}
-      {eventLog.length > 0 && (
-        <div style={styles.eventLog}>
-          <div style={styles.logTitle}>Event Log</div>
-          {eventLog.slice(-8).map((msg, i) => (
-            <div key={i} style={{
-              ...styles.logEntry,
-              color: msg.includes('LOCKDOWN') || msg.includes('CAUGHT') ? '#ff4444' :
-                     msg.includes('ALERT') || msg.includes('SUSPICIOUS') ? '#ffcc00' :
-                     msg.includes('complete') || msg.includes('COMPLETE') ? '#00ff88' :
-                     '#aaa',
-            }}>
-              {msg}
+      <AnimatePresence>
+        {eventLog.length > 0 && (
+          <motion.div 
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: 'auto' }}
+            className="glass-panel" 
+            style={s.eventLog}
+          >
+            <div style={s.logTitle}><Terminal size={14} /> Event Log</div>
+            <div style={{ display: 'flex', flexDirection: 'column-reverse' }}>
+              {eventLog.slice(-15).reverse().map((msg, i) => (
+                <motion.div 
+                  key={`${msg}-${i}`} 
+                  initial={{ opacity: 0, x: -10 }}
+                  animate={{ opacity: i === 0 ? 1 : 0.6, x: 0 }}
+                  style={{
+                    ...s.logEntry,
+                    color: msg.includes('LOCKDOWN') || msg.includes('CAUGHT') ? 'var(--neon-magenta)' :
+                           msg.includes('ALERT') || msg.includes('SUSPICIOUS') ? 'var(--neon-yellow)' :
+                           msg.includes('complete') || msg.includes('COMPLETE') ? 'var(--neon-green)' :
+                           '#aaa',
+                  }}
+                >
+                  {msg}
+                </motion.div>
+              ))}
             </div>
-          ))}
-        </div>
-      )}
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

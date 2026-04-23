@@ -65,7 +65,7 @@ export default function MinimaxPanel() {
         .attr('x', PANEL_W / 2)
         .attr('y', PANEL_H / 2)
         .attr('text-anchor', 'middle')
-        .attr('fill', '#555')
+        .attr('fill', '#8892b0')
         .attr('font-family', 'monospace')
         .attr('font-size', 12)
         .text('Minimax tree appears after turn execution…')
@@ -86,8 +86,8 @@ export default function MinimaxPanel() {
       .attr('y1', (d) => d.source.y)
       .attr('x2', (d) => d.target.x)
       .attr('y2', (d) => d.target.y)
-      .attr('stroke', (d) => d.target.data.pruned ? '#333' : '#555')
-      .attr('stroke-width', 1)
+      .attr('stroke', (d) => d.target.data.pruned ? 'rgba(255,255,255,0.1)' : 'rgba(255, 107, 53, 0.4)')
+      .attr('stroke-width', 1.5)
       .attr('stroke-dasharray', (d) => d.target.data.pruned ? '3,3' : 'none')
 
     // Nodes
@@ -101,28 +101,29 @@ export default function MinimaxPanel() {
       .attr('y', -8)
       .attr('width', 40)
       .attr('height', 16)
-      .attr('rx', 3)
+      .attr('rx', 4)
       .attr('fill', (d) => {
-        if (d.data.pruned) return '#222'
-        if (d.depth === 0) return '#e9456033'
-        return d.data.score > 0 ? '#00ff8822' : '#e9456022'
+        if (d.data.pruned) return 'rgba(255,255,255,0.05)'
+        if (d.depth === 0) return 'rgba(255, 0, 60, 0.2)'
+        return d.data.score > 0 ? 'rgba(0, 255, 102, 0.2)' : 'rgba(255, 0, 60, 0.2)'
       })
-      .attr('stroke', (d) => d.data.pruned ? '#333' : '#555')
-      .attr('stroke-width', 0.5)
+      .attr('stroke', (d) => d.data.pruned ? '#333' : 'var(--neon-magenta)')
+      .attr('stroke-width', 1)
 
     nodeGroups.append('text')
       .attr('text-anchor', 'middle')
       .attr('dy', 3)
-      .attr('fill', (d) => d.data.pruned ? '#444' : '#ccc')
-      .attr('font-size', 8)
+      .attr('fill', (d) => d.data.pruned ? '#495670' : '#e6f1ff')
+      .attr('font-size', 9)
       .attr('font-family', 'monospace')
+      .attr('font-weight', 'bold')
       .text((d) => `${d.data.score.toFixed(1)}`)
 
     nodeGroups.append('text')
       .attr('text-anchor', 'middle')
       .attr('dy', -12)
-      .attr('fill', '#888')
-      .attr('font-size', 7)
+      .attr('fill', '#a8b2d1')
+      .attr('font-size', 8)
       .attr('font-family', 'monospace')
       .text((d) => {
         const a = d.data.action
@@ -140,28 +141,26 @@ export default function MinimaxPanel() {
       left: 360,
       width: PANEL_W,
       height: PANEL_H,
-      background: 'rgba(10, 10, 25, 0.9)',
-      border: '1px solid rgba(255, 107, 53, 0.25)',
-      borderRadius: 8,
-      overflow: 'hidden',
       zIndex: 15,
-      backdropFilter: 'blur(8px)',
-    }}>
+    }} className="glass-panel">
       <div style={{
-        padding: '6px 12px',
-        fontSize: 10,
-        fontFamily: 'monospace',
-        color: '#ff6b35',
+        padding: '12px',
+        fontSize: '0.85rem',
+        fontFamily: 'Space Grotesk, sans-serif',
+        fontWeight: 700,
+        color: 'var(--neon-magenta)',
         textTransform: 'uppercase',
-        letterSpacing: 2,
-        borderBottom: '1px solid rgba(255, 107, 53, 0.15)',
+        letterSpacing: '0.1em',
+        borderBottom: '1px solid var(--glass-border)',
       }}>
-        <div>Warden's Strategy — Minimax</div>
-        <div style={{ fontSize: 9, color: '#555', textTransform: 'none', letterSpacing: 0, marginTop: 2 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          Warden's Strategy — Minimax
+        </div>
+        <div style={{ fontSize: '0.7rem', color: '#8892b0', textTransform: 'none', letterSpacing: 0, marginTop: 4, fontWeight: 400 }}>
           Deciding how to reposition guards to catch you
         </div>
       </div>
-      <svg ref={svgRef} width={PANEL_W} height={PANEL_H - 28} />
+      <svg ref={svgRef} width={PANEL_W} height={PANEL_H - 45} />
     </div>
   )
 }

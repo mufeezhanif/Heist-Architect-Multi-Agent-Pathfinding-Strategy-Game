@@ -6,23 +6,25 @@ import { useGameStore } from '../store/gameStore'
 import { createGame, connectWebSocket } from '../api/client'
 import { normalizeAgent, normalizeGuard, normalizeBuilding } from '../api/normalize'
 import HowToPlay from './HowToPlay'
+import { motion, AnimatePresence } from 'framer-motion'
+import { Play, Eye, HelpCircle, BookOpen } from 'lucide-react'
 
 // ── Floating particles ──
-function Particles({ count = 120 }: { count?: number }) {
+function Particles({ count = 200 }: { count?: number }) {
   const ref = useRef<THREE.Points>(null)
 
   const positions = useMemo(() => {
     const arr = new Float32Array(count * 3)
     for (let i = 0; i < count * 3; i++) {
-      arr[i] = (Math.random() - 0.5) * 30
+      arr[i] = (Math.random() - 0.5) * 40
     }
     return arr
   }, [count])
 
   useFrame(({ clock }) => {
     if (ref.current) {
-      ref.current.rotation.y = clock.getElapsedTime() * 0.02
-      ref.current.rotation.x = Math.sin(clock.getElapsedTime() * 0.01) * 0.1
+      ref.current.rotation.y = clock.getElapsedTime() * 0.015
+      ref.current.rotation.x = Math.sin(clock.getElapsedTime() * 0.01) * 0.05
     }
   })
 
@@ -31,7 +33,7 @@ function Particles({ count = 120 }: { count?: number }) {
       <bufferGeometry>
         <bufferAttribute attach="attributes-position" count={count} array={positions} itemSize={3} />
       </bufferGeometry>
-      <pointsMaterial color="#00d4ff" size={0.06} transparent opacity={0.6} sizeAttenuation />
+      <pointsMaterial color="#00f0ff" size={0.08} transparent opacity={0.8} sizeAttenuation blending={THREE.AdditiveBlending} />
     </points>
   )
 }
@@ -42,31 +44,33 @@ function RotatingBuilding() {
 
   useFrame(({ clock }) => {
     if (ref.current) {
-      ref.current.rotation.y = clock.getElapsedTime() * 0.08
+      ref.current.rotation.y = clock.getElapsedTime() * 0.05
     }
   })
 
   return (
-    <group ref={ref} position={[0, -1, 0]}>
+    <group ref={ref} position={[0, -2, 0]}>
       {/* A simple wireframe grid representing the building */}
-      {Array.from({ length: 5 }).map((_, row) =>
-        Array.from({ length: 5 }).map((_, col) => {
-          const h = 0.5 + Math.random() * 1.5
+      {Array.from({ length: 7 }).map((_, row) =>
+        Array.from({ length: 7 }).map((_, col) => {
+          const h = 0.5 + Math.random() * 2.5
           return (
-            <mesh key={`${row}-${col}`} position={[(row - 2) * 1.2, h / 2, (col - 2) * 1.2]}>
-              <boxGeometry args={[1, h, 1]} />
+            <mesh key={`${row}-${col}`} position={[(row - 3) * 1.5, h / 2, (col - 3) * 1.5]}>
+              <boxGeometry args={[1.2, h, 1.2]} />
               <meshStandardMaterial
-                color="#16213e"
+                color="#0a192f"
+                emissive="#00f0ff"
+                emissiveIntensity={0.1}
                 wireframe
                 transparent
-                opacity={0.4}
+                opacity={0.3}
               />
             </mesh>
           )
         }),
       )}
       {/* Neon floor grid */}
-      <gridHelper args={[8, 8, '#00d4ff', '#0a0a2e']} />
+      <gridHelper args={[15, 15, '#00f0ff', '#050508']} />
     </group>
   )
 }
@@ -87,70 +91,78 @@ const s: Record<string, React.CSSProperties> = {
     justifyContent: 'center',
     zIndex: 10,
     pointerEvents: 'none',
+    background: 'radial-gradient(circle at center, transparent 0%, rgba(5,5,8,0.8) 100%)',
   },
   title: {
-    fontSize: 64,
-    fontWeight: 900,
-    fontFamily: 'monospace',
-    letterSpacing: 8,
+    fontSize: '5rem',
+    fontWeight: 800,
+    letterSpacing: '0.2em',
     color: '#fff',
-    textShadow: '0 0 40px #00d4ff, 0 0 80px #00d4ff55',
-    marginBottom: 8,
+    textShadow: '0 0 20px var(--neon-cyan), 0 0 40px var(--neon-cyan)',
+    marginBottom: '0.5rem',
+    textAlign: 'center',
   },
   subtitle: {
-    fontSize: 14,
-    fontFamily: 'monospace',
-    color: '#888',
-    letterSpacing: 4,
-    textTransform: 'uppercase' as const,
-    marginBottom: 16,
+    fontSize: '1.2rem',
+    color: 'var(--neon-cyan)',
+    letterSpacing: '0.4em',
+    textTransform: 'uppercase',
+    marginBottom: '2rem',
+    fontWeight: 600,
+    textShadow: '0 0 10px rgba(0, 240, 255, 0.5)',
   },
   pitch: {
-    fontSize: 13,
-    fontFamily: 'monospace',
-    color: '#aaa',
-    textAlign: 'center' as const,
-    maxWidth: 520,
-    lineHeight: 1.7,
-    marginBottom: 36,
+    fontSize: '1.1rem',
+    color: '#a8b2d1',
+    textAlign: 'center',
+    maxWidth: '600px',
+    lineHeight: 1.8,
+    marginBottom: '3rem',
+    backdropFilter: 'blur(4px)',
+    padding: '1.5rem',
+    borderRadius: '12px',
+    background: 'rgba(10, 25, 47, 0.4)',
+    border: '1px solid rgba(0, 240, 255, 0.1)',
   },
   btnGroup: {
     display: 'flex',
-    gap: 20,
+    gap: '24px',
     pointerEvents: 'auto',
-    flexWrap: 'wrap' as const,
+    flexWrap: 'wrap',
     justifyContent: 'center',
   },
   secondaryBtnGroup: {
     display: 'flex',
-    gap: 16,
+    gap: '16px',
     pointerEvents: 'auto',
-    marginTop: 20,
-    flexWrap: 'wrap' as const,
+    marginTop: '24px',
+    flexWrap: 'wrap',
     justifyContent: 'center',
   },
-  btn: {
+  btnBase: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px',
     padding: '16px 40px',
-    border: '2px solid',
-    borderRadius: 8,
-    background: 'rgba(10, 10, 25, 0.7)',
-    fontFamily: 'monospace',
-    fontSize: 14,
+    borderRadius: '8px',
+    fontSize: '1.1rem',
     fontWeight: 700,
     cursor: 'pointer',
-    textTransform: 'uppercase' as const,
-    letterSpacing: 2,
-    backdropFilter: 'blur(10px)',
-    transition: 'all 0.2s',
+    textTransform: 'uppercase',
+    letterSpacing: '0.1em',
+    transition: 'all 0.3s ease',
+    border: 'none',
+    position: 'relative',
+    overflow: 'hidden',
   },
   footer: {
     position: 'absolute',
-    bottom: 24,
-    fontSize: 11,
-    fontFamily: 'monospace',
-    color: '#444',
-    letterSpacing: 2,
+    bottom: '24px',
+    fontSize: '0.8rem',
+    color: '#64ffda',
+    letterSpacing: '0.2em',
     zIndex: 10,
+    opacity: 0.7,
   },
 }
 
@@ -192,85 +204,149 @@ export default function LandingPage() {
   return (
     <div style={s.container}>
       {/* 3D Background */}
-      <Canvas camera={{ position: [0, 4, 8], fov: 50 }} style={{ position: 'absolute', inset: 0 }}>
-        <ambientLight intensity={0.1} />
-        <pointLight position={[5, 5, 5]} intensity={0.4} color="#00d4ff" />
-        <pointLight position={[-5, 3, -5]} intensity={0.3} color="#e94560" />
-        <fog attach="fog" args={['#0a0a1a', 8, 25]} />
+      <Canvas camera={{ position: [0, 6, 12], fov: 55 }} style={{ position: 'absolute', inset: 0 }}>
+        <ambientLight intensity={0.2} />
+        <pointLight position={[5, 5, 5]} intensity={0.8} color="#00f0ff" />
+        <pointLight position={[-5, 3, -5]} intensity={0.5} color="#ff003c" />
+        <fog attach="fog" args={['#050508', 10, 30]} />
         <RotatingBuilding />
         <Particles />
       </Canvas>
 
       {/* Overlay */}
       <div style={s.overlay}>
-        <div style={s.title}>HEIST ARCHITECT</div>
-        <div style={s.subtitle}>Multi-Agent Pathfinding Strategy Game</div>
+        <motion.div
+          initial={{ opacity: 0, y: -50 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, ease: "easeOut" }}
+          style={s.title}
+          className="glitch-hover"
+        >
+          HEIST ARCHITECT
+        </motion.div>
+        
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 1, delay: 0.4 }}
+          style={s.subtitle}
+        >
+          Multi-Agent Pathfinding Strategy Game
+        </motion.div>
 
-        <div style={s.pitch}>
-          Command a crew of 3 specialists to pull off the perfect heist.
-          Navigate guards, cameras, and sensors in this turn-based strategy game powered by 5 AI algorithms.
-          Outsmart the AI Warden — or watch two AIs battle it out.
-        </div>
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.8, delay: 0.8 }}
+          style={s.pitch}
+          className="glass-panel"
+        >
+          Command a crew of 3 elite specialists to pull off the perfect heist.
+          Navigate guards, cameras, and laser sensors in this turn-based strategy game powered by <strong>5 advanced AI algorithms</strong>.
+          Outsmart the AI Warden — or watch two AIs battle it out in real-time.
+        </motion.div>
 
-        <div style={s.btnGroup}>
-          <button
-            style={{ ...s.btn, borderColor: '#00d4ff', color: '#00d4ff' }}
+        <motion.div 
+          style={s.btnGroup}
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, delay: 1.2 }}
+        >
+          <motion.button
+            whileHover={{ scale: 1.05, boxShadow: '0 0 20px var(--neon-cyan)' }}
+            whileTap={{ scale: 0.95 }}
+            style={{
+              ...s.btnBase,
+              background: 'rgba(0, 240, 255, 0.1)',
+              color: 'var(--neon-cyan)',
+              border: '2px solid var(--neon-cyan)',
+            }}
             onClick={() => startGame('pvai')}
-            onMouseOver={(e) => {
-              e.currentTarget.style.background = 'rgba(0, 212, 255, 0.15)'
-            }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.background = 'rgba(10, 10, 25, 0.7)'
-            }}
           >
+            <Play size={20} />
             Play as Mastermind
-          </button>
-          <button
-            style={{ ...s.btn, borderColor: '#e94560', color: '#e94560' }}
+          </motion.button>
+          
+          <motion.button
+            whileHover={{ scale: 1.05, boxShadow: '0 0 20px var(--neon-magenta)' }}
+            whileTap={{ scale: 0.95 }}
+            style={{
+              ...s.btnBase,
+              background: 'rgba(255, 0, 60, 0.1)',
+              color: 'var(--neon-magenta)',
+              border: '2px solid var(--neon-magenta)',
+            }}
             onClick={() => startGame('spectator')}
-            onMouseOver={(e) => {
-              e.currentTarget.style.background = 'rgba(233, 69, 96, 0.15)'
-            }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.background = 'rgba(10, 10, 25, 0.7)'
-            }}
           >
+            <Eye size={20} />
             Watch AI vs AI
-          </button>
-        </div>
+          </motion.button>
+        </motion.div>
 
-        <div style={s.secondaryBtnGroup}>
-          <button
-            style={{ ...s.btn, borderColor: '#00ff88', color: '#00ff88', padding: '12px 28px', fontSize: 12 }}
+        <motion.div 
+          style={s.secondaryBtnGroup}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 0.8, delay: 1.6 }}
+        >
+          <motion.button
+            whileHover={{ scale: 1.05, background: 'rgba(0, 255, 102, 0.2)' }}
+            whileTap={{ scale: 0.95 }}
+            style={{
+              ...s.btnBase,
+              padding: '12px 24px',
+              fontSize: '0.9rem',
+              background: 'rgba(10, 10, 15, 0.6)',
+              color: 'var(--neon-green)',
+              border: '1px solid var(--neon-green)',
+            }}
             onClick={() => startGame('pvai', true)}
-            onMouseOver={(e) => {
-              e.currentTarget.style.background = 'rgba(0, 255, 136, 0.15)'
-            }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.background = 'rgba(10, 10, 25, 0.7)'
-            }}
           >
-            📖 Interactive Tutorial
-          </button>
-          <button
-            style={{ ...s.btn, borderColor: '#ffcc00', color: '#ffcc00', padding: '12px 28px', fontSize: 12 }}
+            <BookOpen size={16} />
+            Interactive Tutorial
+          </motion.button>
+
+          <motion.button
+            whileHover={{ scale: 1.05, background: 'rgba(252, 238, 10, 0.2)' }}
+            whileTap={{ scale: 0.95 }}
+            style={{
+              ...s.btnBase,
+              padding: '12px 24px',
+              fontSize: '0.9rem',
+              background: 'rgba(10, 10, 15, 0.6)',
+              color: 'var(--neon-yellow)',
+              border: '1px solid var(--neon-yellow)',
+            }}
             onClick={() => setShowHowToPlay(true)}
-            onMouseOver={(e) => {
-              e.currentTarget.style.background = 'rgba(255, 204, 0, 0.15)'
-            }}
-            onMouseOut={(e) => {
-              e.currentTarget.style.background = 'rgba(10, 10, 25, 0.7)'
-            }}
           >
-            ❓ How to Play
-          </button>
-        </div>
+            <HelpCircle size={16} />
+            How to Play
+          </motion.button>
+        </motion.div>
       </div>
 
-      <div style={s.footer}>CS 2005 — Artificial Intelligence Lab Project</div>
+      <motion.div 
+        style={s.footer}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 0.7 }}
+        transition={{ duration: 1, delay: 2 }}
+      >
+        CS 2005 — Artificial Intelligence Lab Project
+      </motion.div>
 
       {/* How to Play overlay */}
-      {showHowToPlay && <HowToPlay asModal />}
+      <AnimatePresence>
+        {showHowToPlay && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.9 }}
+            style={{ position: 'absolute', inset: 0, zIndex: 100 }}
+          >
+            <HowToPlay asModal />
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }

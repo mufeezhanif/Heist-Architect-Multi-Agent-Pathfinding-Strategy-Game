@@ -6,9 +6,9 @@ import * as THREE from 'three'
 import { useGameStore } from '../store/gameStore'
 
 const ROLE_COLORS: Record<string, string> = {
-  hacker: '#00ff88',
-  thief: '#e94560',
-  muscle: '#ff6b35',
+  hacker: '#00ff66',
+  thief: '#00f0ff',
+  muscle: '#fcee0a',
 }
 
 const ROLE_EMOJI: Record<string, string> = {
@@ -17,7 +17,7 @@ const ROLE_EMOJI: Record<string, string> = {
   muscle: '💪',
 }
 
-const GUARD_COLOR = '#ff0055'
+const GUARD_COLOR = '#ff003c'
 
 /* ── Hacker Character — slim body, hoodie, antenna/signal ── */
 function HackerModel({ color }: { color: string }) {
