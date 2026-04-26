@@ -9,6 +9,12 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Optional
 import uuid
+import os
+
+# ── Admin / Debug toggle ──────────────────────────────────────────────────────
+# Set HEIST_GOD_MODE=1 (or true/yes) in the environment to disable all guard
+# and camera detections so the heist crew can never be busted.
+GOD_MODE: bool = os.environ.get("HEIST_GOD_MODE", "").lower() in ("1", "true", "yes")
 
 from game.building import Building, CellType, ObjectiveType, create_medium_building
 from game.agents import (
@@ -203,7 +209,7 @@ def create_game(mode: str = "pva_mastermind") -> GameState:
             description="Hacker disables alarm -> Thief enters vault",
         ))
 
-    game_mode = GameMode.AI_VS_AI if mode == "ai_vs_ai" else GameMode.PVA_MASTERMIND
+    game_mode = GameMode.AI_VS_AI if mode in ("ai_vs_ai", "spectator") else GameMode.PVA_MASTERMIND
 
     state = GameState(
         game_id=game_id,
@@ -215,6 +221,8 @@ def create_game(mode: str = "pva_mastermind") -> GameState:
         dependencies=dependencies,
         mode=game_mode,
     )
+    if mode in ("pva_mastermind", "pvai"):
+        _apply_mastermind_easy_preset(state)
     state.event_log.append("Heist begins. Plan your moves carefully.")
 
     _games[game_id] = state
@@ -223,6 +231,26 @@ def create_game(mode: str = "pva_mastermind") -> GameState:
 
 def get_game(game_id: str) -> Optional[GameState]:
     return _games.get(game_id)
+
+
+def _apply_mastermind_easy_preset(game: GameState):
+    """Reduce baseline pressure for human players in mastermind mode."""
+    game.max_turns = 65
+
+    # Lower guard pressure while preserving patrol behavior.
+    game.guards = game.guards[:3]
+    for guard in game.guards:
+        guard.vision_range = 1
+        guard.alert_bonus_range = 0
+
+    # Soften camera coverage slightly.
+    for cam in game.building.cameras:
+        cam.cone_length = max(2, cam.cone_length - 1)
+
+    # Reduce early sensor punishments: keep motion/camera, remove door spam.
+    game.sensors.sensors = [s for s in game.sensors.sensors if s.sensor_type != "door"]
+
+    game.event_log.append("Mastermind mode tuned to normal difficulty (easier guard pressure).")
 
 
 # ────────────────────────────────────────────────────────────────
@@ -380,7 +408,7 @@ def execute_turn(game: GameState) -> TurnResult:
         guard_positions={g.guard_id: (g.x, g.y) for g in game.guards},
         sensor_events=all_sensor_events,
         detections=all_detections,
-        objectives_completed=newly_completed,
+            objectives_completed=list(game.objectives_completed),
         bayesian_heatmap=belief_to_dict(game.belief),
         warden_action=warden_action_dict,
         minimax_log=minimax_log,
@@ -432,6 +460,7 @@ def use_ability(game: GameState, agent_id: str, ability: str, target: dict | Non
                 break
 
     elif ability_type == AbilityType.DISABLE_DEVICE:
+        # Prefer disabling an active camera first.
         for cam in game.building.cameras:
             if not cam.active:
                 continue
@@ -444,17 +473,65 @@ def use_ability(game: GameState, agent_id: str, ability: str, target: dict | Non
                           "target": cam.camera_id}
                 break
 
+        # If no camera was disabled, allow hacker to complete nearby security objectives.
+        if not result.get("success"):
+            for dy in range(-1, 2):
+                for dx in range(-1, 2):
+                    if abs(dx) + abs(dy) > 1:
+                        continue
+                    cell = game.building.cell_at(crew.x + dx, crew.y + dy)
+                    if not cell or not cell.objective:
+                        continue
+                    if cell.objective not in (ObjectiveType.DISABLE_ALARM, ObjectiveType.DISABLE_CAMERA):
+                        continue
+
+                    obj_name = cell.objective.value
+                    if obj_name not in game.objectives_completed:
+                        game.objectives_completed.append(obj_name)
+                        game.score += 50
+
+                    # Mark security objective as handled on the map.
+                    cell.objective = None
+                    crew.use_ability(ability_type)
+                    game.event_log.append(f"HACKER completed {obj_name} at ({cell.x},{cell.y})!")
+                    result = {
+                        "success": True,
+                        "message": f"Completed {obj_name} at ({cell.x},{cell.y})",
+                        "target": f"objective:{obj_name}",
+                    }
+                    break
+                if result.get("success"):
+                    break
+
     elif ability_type == AbilityType.PICK_LOCK:
+        # Priority 1: thief on / adjacent to STEAL_LOOT objective → steal the loot
         for dx, dy in [(0, 0), (0, -1), (1, 0), (0, 1), (-1, 0)]:
             cell = game.building.cell_at(crew.x + dx, crew.y + dy)
-            if cell and cell.is_locked:
-                cell.is_locked = False
-                cell.lockdown_turns = 0
+            if cell and cell.objective == ObjectiveType.STEAL_LOOT:
+                obj_name = cell.objective.value
+                if obj_name not in game.objectives_completed:
+                    game.objectives_completed.append(obj_name)
+                    game.score += 50
+                    game.event_log.append(f"THIEF stole the loot at ({cell.x},{cell.y})!")
                 crew.use_ability(ability_type)
-                game.event_log.append(f"THIEF picked lock at ({cell.x},{cell.y})!")
-                result = {"success": True, "message": f"Unlocked door at ({cell.x},{cell.y})"}
+                result = {
+                    "success": True,
+                    "message": f"Stole the loot at ({cell.x},{cell.y})!",
+                    "target": "objective:steal_loot",
+                }
                 break
 
+        # Priority 2: pick a nearby locked door
+        if not result.get("success"):
+            for dx, dy in [(0, 0), (0, -1), (1, 0), (0, 1), (-1, 0)]:
+                cell = game.building.cell_at(crew.x + dx, crew.y + dy)
+                if cell and cell.is_locked:
+                    cell.is_locked = False
+                    cell.lockdown_turns = 0
+                    crew.use_ability(ability_type)
+                    game.event_log.append(f"THIEF picked lock at ({cell.x},{cell.y})!")
+                    result = {"success": True, "message": f"Unlocked door at ({cell.x},{cell.y})"}
+                    break
     elif ability_type == AbilityType.SPRINT:
         path = game.current_paths.get(crew.agent_id, [])
         moved = 0
@@ -658,6 +735,9 @@ def _events_to_observations_from_dicts(events: list[dict]) -> list[Observation]:
 
 
 def _check_detections(game: GameState) -> list[dict]:
+    # God-mode: admin has disabled guard/camera detection
+    if GOD_MODE:
+        return []
     detections = []
     for guard in game.guards:
         if guard.knocked_out:

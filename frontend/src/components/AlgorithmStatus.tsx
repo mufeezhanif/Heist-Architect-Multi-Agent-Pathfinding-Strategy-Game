@@ -12,6 +12,13 @@ const s: Record<string, React.CSSProperties> = {
     flexWrap: 'wrap',
     maxWidth: 400,
   },
+  panelInline: {
+    position: 'relative',
+    display: 'flex',
+    gap: 6,
+    flexWrap: 'wrap',
+    width: '100%',
+  },
   chip: {
     display: 'flex',
     alignItems: 'center',
@@ -40,7 +47,9 @@ const ALGORITHMS = [
   { key: 'minimax', label: 'Minimax', desc: 'Guard Strategy', color: '#e94560', phase: 'execute' },
 ]
 
-export default function AlgorithmStatus() {
+interface Props { inline?: boolean }
+
+export default function AlgorithmStatus({ inline = false }: Props = {}) {
   const planning = useGameStore((s) => s.planning)
   const gameStatus = useGameStore((s) => s.gameStatus)
   const cbsEvents = useGameStore((s) => s.cbsEvents)
@@ -52,7 +61,7 @@ export default function AlgorithmStatus() {
   const cbsRunning = planActive && cbsEvents.length > 0
 
   return (
-    <div style={s.panel}>
+    <div style={inline ? s.panelInline : s.panel}>
       {ALGORITHMS.map((algo) => {
         const isActive = algo.phase === 'plan' ? planActive : false
         const isDone = algo.key === 'cbs' ? cbsRunning : false

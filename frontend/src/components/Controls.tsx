@@ -45,7 +45,8 @@ const s: Record<string, React.CSSProperties> = {
     borderRadius: '16px',
     padding: '16px 24px',
     backdropFilter: 'blur(16px)',
-    zIndex: 20,
+    // Keep core turn controls above floating analytics panels.
+    zIndex: 30,
     flexWrap: 'wrap',
     justifyContent: 'center',
     maxWidth: '95vw',
@@ -119,7 +120,7 @@ const s: Record<string, React.CSSProperties> = {
   waypointTag: {
     fontSize: '0.75rem',
     fontFamily: 'monospace',
-    color: '#8892b0',
+    color: 'var(--text-secondary)',
     marginTop: '4px',
     background: 'rgba(0,0,0,0.4)',
     padding: '2px 8px',
@@ -144,7 +145,7 @@ const s: Record<string, React.CSSProperties> = {
   hint: {
     fontSize: '0.85rem',
     fontFamily: 'monospace',
-    color: '#a8b2d1',
+    color: 'var(--text-secondary)',
     textAlign: 'center',
     maxWidth: '280px',
     lineHeight: 1.4,
@@ -170,6 +171,7 @@ export default function Controls() {
   const setMoveMode = useGameStore((s) => s.setMoveMode)
   const pendingMoves = useGameStore((s) => s.pendingMoves)
   const clearNarration = useGameStore((s) => s.clearNarration)
+  const reset = useGameStore((s) => s.reset)
   const isTutorial = useGameStore((s) => s.isTutorial)
   const advanceTutorial = useGameStore((s) => s.advanceTutorial)
   const tutorialStep = useGameStore((s) => s.tutorialStep)
@@ -202,6 +204,12 @@ export default function Controls() {
     clearCBSEvents()
     clearNarration()
     sendWS({ action: 'ai_step' })
+  }
+
+  const handleExitGame = () => {
+    const ok = window.confirm('Exit current game and return to main menu?')
+    if (!ok) return
+    reset()
   }
 
   if (gameStatus !== 'active') return null
@@ -240,7 +248,7 @@ export default function Controls() {
               style={{
                 ...s.modeBtn,
                 background: moveMode === 'quick' ? 'var(--neon-cyan)' : 'transparent',
-                color: moveMode === 'quick' ? '#050508' : '#8892b0',
+                color: moveMode === 'quick' ? '#050508' : 'var(--text-secondary)',
               }}
               onClick={() => setMoveMode('quick')}
             >
@@ -251,7 +259,7 @@ export default function Controls() {
               style={{
                 ...s.modeBtn,
                 background: moveMode === 'strategic' ? 'var(--neon-cyan)' : 'transparent',
-                color: moveMode === 'strategic' ? '#050508' : '#8892b0',
+                color: moveMode === 'strategic' ? '#050508' : 'var(--text-secondary)',
               }}
               onClick={() => setMoveMode('strategic')}
             >
@@ -403,6 +411,23 @@ export default function Controls() {
           <BrainCircuit size={18} /> {planning ? 'AI Thinking…' : 'AI Step'}
         </motion.button>
       )}
+
+      <motion.button
+        whileHover={{ scale: 1.05, boxShadow: '0 0 16px rgba(255, 0, 60, 0.45)' }}
+        whileTap={{ scale: 0.95 }}
+        onClick={handleExitGame}
+        title="Exit the current game and return to the main menu"
+        style={{
+          ...s.actionBtn,
+          padding: '10px 16px',
+          fontSize: '0.85rem',
+          background: 'rgba(255, 0, 60, 0.12)',
+          color: 'var(--neon-magenta)',
+          border: '1px solid rgba(255, 0, 60, 0.45)',
+        }}
+      >
+        Exit
+      </motion.button>
     </motion.div>
   )
 }

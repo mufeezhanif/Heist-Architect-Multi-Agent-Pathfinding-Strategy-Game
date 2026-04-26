@@ -1,10 +1,12 @@
-/* ── CBSTreePanel — animated CBS constraint tree using D3 ── */
-import { useEffect, useRef } from 'react'
+/* ── CBSTreePanel — CBS constraint tree with plain-English summary ── */
+import { useEffect, useRef, useMemo } from 'react'
 import * as d3 from 'd3'
 import { useGameStore } from '../store/gameStore'
+import DraggablePanel from '../components/DraggablePanel'
+import InlinePanel from '../components/InlinePanel'
 
 const PANEL_W = 340
-const PANEL_H = 280
+const TREE_H = 200
 
 interface TreeNode {
   id: string
@@ -17,54 +19,36 @@ interface TreeNode {
 
 function buildTree(events: { step: string;[key: string]: unknown }[]): TreeNode | null {
   const nodes = new Map<string, TreeNode>()
-
-  let rootId = 'root'
-  nodes.set(rootId, { id: rootId, parent: null, label: 'Root', cost: 0, status: 'exploring', children: [] })
+  const rootId = 'root'
+  nodes.set(rootId, { id: rootId, parent: null, label: 'Start', cost: 0, status: 'exploring', children: [] })
 
   for (const ev of events) {
     const step = ev.step as string
-
-    if (step === 'cbs_init' || step === 'astar_start') {
-      // Initialization events
-    } else if (step === 'cbs_expand') {
+    if (step === 'cbs_expand') {
       const nodeId = (ev.node_id as string) || `n${nodes.size}`
       if (!nodes.has(nodeId)) {
-        nodes.set(nodeId, { id: nodeId, parent: rootId, label: `Expand`, cost: (ev.cost as number) || 0, status: 'exploring', children: [] })
+        nodes.set(nodeId, { id: nodeId, parent: rootId, label: 'Try', cost: (ev.cost as number) || 0, status: 'exploring', children: [] })
         nodes.get(rootId)!.children.push(nodes.get(nodeId)!)
       }
     } else if (step === 'cbs_conflict') {
       const parentId = (ev.parent_id as string) || [...nodes.keys()].pop() || rootId
       const nodeId = `conflict_${nodes.size}`
-      const agent1 = (ev.agent1 as string) || '?'
-      const agent2 = (ev.agent2 as string) || '?'
-      const node: TreeNode = {
-        id: nodeId,
-        parent: parentId,
-        label: `${agent1}↔${agent2}`,
-        cost: 0,
-        status: 'conflict',
-        children: [],
-      }
+      const a1 = (ev.agent1 as string) || '?'
+      const a2 = (ev.agent2 as string) || '?'
+      const node: TreeNode = { id: nodeId, parent: parentId, label: `${a1}↔${a2}`, cost: 0, status: 'conflict', children: [] }
       nodes.set(nodeId, node)
-
-      const parent = nodes.get(parentId)
-      if (parent) parent.children.push(node)
+      nodes.get(parentId)?.children.push(node)
     } else if (step === 'cbs_branch') {
       const parentId = (ev.parent_id as string) || [...nodes.keys()].pop() || rootId
       const nodeId = (ev.branch_id as string) || `branch_${nodes.size}`
       const node: TreeNode = {
-        id: nodeId,
-        parent: parentId,
-        label: `Branch ${(ev.agent as string) || ''}`,
-        cost: (ev.cost as number) || 0,
-        status: 'exploring',
-        children: [],
+        id: nodeId, parent: parentId,
+        label: `Re-route ${(ev.agent as string) || ''}`,
+        cost: (ev.cost as number) || 0, status: 'exploring', children: [],
       }
       nodes.set(nodeId, node)
-      const parent = nodes.get(parentId)
-      if (parent) parent.children.push(node)
+      nodes.get(parentId)?.children.push(node)
     } else if (step === 'cbs_solution') {
-      // Mark last node as resolved
       const lastNode = [...nodes.values()].pop()
       if (lastNode) lastNode.status = 'resolved'
     }
@@ -73,49 +57,39 @@ function buildTree(events: { step: string;[key: string]: unknown }[]): TreeNode 
   return nodes.get(rootId) || null
 }
 
-export default function CBSTreePanel() {
+export default function CBSTreePanel({ inline = false }: { inline?: boolean } = {}) {
   const svgRef = useRef<SVGSVGElement>(null)
   const cbsEvents = useGameStore((s) => s.cbsEvents)
   const show = useGameStore((s) => s.showCBSTree)
+  const toggleViz = useGameStore((s) => s.toggleViz)
+
+  // Plain-English summary
+  const summary = useMemo(() => {
+    const conflicts = cbsEvents.filter(e => e.step === 'cbs_conflict').length
+    const branches = cbsEvents.filter(e => e.step === 'cbs_branch').length
+    const solved = cbsEvents.some(e => e.step === 'cbs_solution')
+    return { conflicts, branches, solved }
+  }, [cbsEvents])
 
   useEffect(() => {
     if (!svgRef.current || !show) return
-
     const svg = d3.select(svgRef.current)
     svg.selectAll('*').remove()
 
     const root = buildTree(cbsEvents)
     if (!root || root.children.length === 0) {
       svg.append('text')
-        .attr('x', PANEL_W / 2)
-        .attr('y', PANEL_H / 2)
-        .attr('text-anchor', 'middle')
-        .attr('fill', '#8892b0')
-        .attr('font-family', 'monospace')
-        .attr('font-size', 12)
-        .text('CBS tree will appear during planning…')
+        .attr('x', PANEL_W / 2).attr('y', TREE_H / 2)
+        .attr('text-anchor', 'middle').attr('fill', '#8892b0')
+        .attr('font-family', 'monospace').attr('font-size', 12)
+        .text('Planning tree will appear here…')
       return
     }
 
     const hierarchy = d3.hierarchy(root, (d) => d.children)
-    const treeLayout = d3.tree<TreeNode>().size([PANEL_W - 40, PANEL_H - 60])
-    const treeData = treeLayout(hierarchy)
+    const treeData = d3.tree<TreeNode>().size([PANEL_W - 40, TREE_H - 40])(hierarchy)
+    const g = svg.append('g').attr('transform', 'translate(20,20)')
 
-    const g = svg.append('g').attr('transform', 'translate(20, 30)')
-
-    // Links
-    g.selectAll('.link')
-      .data(treeData.links())
-      .join('line')
-      .attr('class', 'link')
-      .attr('x1', (d) => d.source.x)
-      .attr('y1', (d) => d.source.y)
-      .attr('x2', (d) => d.target.x)
-      .attr('y2', (d) => d.target.y)
-      .attr('stroke', 'rgba(0, 240, 255, 0.2)')
-      .attr('stroke-width', 1.5)
-
-    // Nodes
     const statusColor: Record<string, string> = {
       exploring: 'var(--neon-cyan)',
       conflict: 'var(--neon-magenta)',
@@ -123,58 +97,87 @@ export default function CBSTreePanel() {
       pruned: '#495670',
     }
 
-    const nodeGroups = g.selectAll('.node')
+    g.selectAll('.link')
+      .data(treeData.links())
+      .join('line')
+      .attr('x1', d => d.source.x).attr('y1', d => d.source.y)
+      .attr('x2', d => d.target.x).attr('y2', d => d.target.y)
+      .attr('stroke', 'rgba(0,240,255,0.2)').attr('stroke-width', 1.5)
+
+    const nodes = g.selectAll('.node')
       .data(treeData.descendants())
       .join('g')
-      .attr('class', 'node')
-      .attr('transform', (d) => `translate(${d.x}, ${d.y})`)
+      .attr('transform', d => `translate(${d.x},${d.y})`)
 
-    nodeGroups.append('circle')
-      .attr('r', 6)
-      .attr('fill', (d) => statusColor[d.data.status] || '#555')
-      .attr('stroke', (d) => d.data.status === 'resolved' ? 'var(--neon-green)' : 'none')
+    nodes.append('circle')
+      .attr('r', 5)
+      .attr('fill', d => statusColor[d.data.status] || '#555')
+      .attr('stroke', d => d.data.status === 'resolved' ? 'var(--neon-green)' : 'none')
       .attr('stroke-width', 2)
 
-    nodeGroups.append('text')
-      .attr('dy', -10)
-      .attr('text-anchor', 'middle')
-      .attr('fill', '#a8b2d1')
-      .attr('font-size', 9)
-      .attr('font-family', 'monospace')
-      .text((d) => d.data.label)
-
+    nodes.append('text')
+      .attr('dy', -9).attr('text-anchor', 'middle')
+      .attr('fill', '#a8b2d1').attr('font-size', 8).attr('font-family', 'monospace')
+      .text(d => d.data.label)
   }, [cbsEvents, show])
 
   if (!show) return null
 
-  return (
-    <div style={{
-      position: 'absolute',
-      bottom: 80,
-      left: 20,
-      width: PANEL_W,
-      height: PANEL_H,
-      zIndex: 15,
-    }} className="glass-panel">
-      <div style={{
-        padding: '12px',
-        fontSize: '0.85rem',
-        fontFamily: 'Space Grotesk, sans-serif',
-        fontWeight: 700,
-        color: 'var(--neon-cyan)',
-        textTransform: 'uppercase',
-        letterSpacing: '0.1em',
-        borderBottom: '1px solid var(--glass-border)',
-      }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          Path Planning — CBS Tree 
-          <span style={{ fontSize: '0.7rem', opacity: 0.7 }}>({cbsEvents.length} steps)</span>
+  const statusEmoji = summary.solved ? '✅' : summary.conflicts > 0 ? '⚠️' : '🔍'
+  const statusText = summary.solved
+    ? 'All crew paths are collision-free!'
+    : summary.conflicts > 0
+    ? `${summary.conflicts} crew member collision${summary.conflicts > 1 ? 's' : ''} — trying detours`
+    : cbsEvents.length === 0
+    ? 'Waiting for you to assign waypoints & plan…'
+    : 'Calculating collision-free routes…'
+
+  const body = (
+    <>
+      {/* Plain-English status */}
+      <div style={{ padding: '8px 12px', borderBottom: '1px solid rgba(0,240,255,0.1)' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.78rem', fontFamily: 'monospace' }}>
+          <span style={{ fontSize: 15 }}>{statusEmoji}</span>
+          <span style={{ color: summary.solved ? 'var(--neon-green)' : summary.conflicts > 0 ? '#fcee0a' : '#8892b0' }}>
+            {statusText}
+          </span>
         </div>
-        <div style={{ fontSize: '0.7rem', color: '#8892b0', textTransform: 'none', letterSpacing: 0, marginTop: 4, fontWeight: 400 }}>
-          Finding collision-free routes for your crew
-        </div>
+        {cbsEvents.length > 0 && (
+          <div style={{ display: 'flex', gap: 12, color: '#8892b0', fontSize: '0.68rem', fontFamily: 'monospace', marginTop: 4 }}>
+            <span>🔍 {cbsEvents.length} paths explored</span>
+            {summary.branches > 0 && <span style={{ color: 'var(--neon-cyan)' }}>🔀 {summary.branches} reroutes tried</span>}
+          </div>
+        )}
       </div>
-      <svg ref={svgRef} width={PANEL_W} height={PANEL_H - 45} />
-    </div>
+      {/* Color legend */}
+      <div style={{ padding: '4px 12px 5px', display: 'flex', gap: 12, fontSize: '0.65rem', fontFamily: 'monospace', borderBottom: '1px solid rgba(0,240,255,0.08)' }}>
+        <span style={{ color: 'var(--neon-cyan)' }}>● Exploring</span>
+        <span style={{ color: 'var(--neon-magenta)' }}>● Conflict</span>
+        <span style={{ color: 'var(--neon-green)' }}>● Resolved</span>
+      </div>
+      <svg ref={svgRef} width={PANEL_W} height={TREE_H} />
+    </>
+  )
+
+  if (inline) {
+    return (
+      <InlinePanel title="Route Planning (CBS)" subtitle="How AI finds safe paths without crew colliding" color="var(--neon-cyan)">
+        {body}
+      </InlinePanel>
+    )
+  }
+
+  return (
+    <DraggablePanel
+      title="Route Planning (CBS)"
+      subtitle="How AI finds safe paths without crew colliding"
+      color="var(--neon-cyan)"
+      defaultPos={{ x: 20, y: 480 }}
+      width={PANEL_W}
+      onClose={() => toggleViz('showCBSTree')}
+    >
+      {body}
+    </DraggablePanel>
   )
 }
+

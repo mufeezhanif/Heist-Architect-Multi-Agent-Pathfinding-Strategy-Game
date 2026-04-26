@@ -3,15 +3,14 @@ import { useGameStore } from '../store/gameStore'
 
 const s: Record<string, React.CSSProperties> = {
   overlay: {
-    position: 'absolute',
+    position: 'fixed',
     inset: 0,
     display: 'flex',
     flexDirection: 'column',
     alignItems: 'center',
     justifyContent: 'center',
-    background: 'rgba(0, 0, 0, 0.8)',
-    zIndex: 100,
-    backdropFilter: 'blur(6px)',
+    background: 'var(--dark-bg)',
+    zIndex: 9999,
   },
   title: {
     fontSize: 56,
@@ -22,13 +21,13 @@ const s: Record<string, React.CSSProperties> = {
   },
   score: {
     fontSize: 22,
-    color: '#e0e0e0',
+    color: 'var(--text-secondary)',
     fontFamily: 'monospace',
     marginBottom: 8,
   },
   info: {
     fontSize: 14,
-    color: '#888',
+    color: 'var(--text-muted)',
     fontFamily: 'monospace',
     marginBottom: 24,
   },

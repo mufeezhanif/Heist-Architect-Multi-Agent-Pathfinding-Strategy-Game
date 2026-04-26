@@ -4,6 +4,7 @@ Heist Architect — WebSocket for streaming game steps + events
 import math
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect
 from game.engine import get_game, plan_paths, execute_turn, ai_mastermind_plan, use_ability
+from game.engine import GOD_MODE
 import json
 import asyncio
 
@@ -34,10 +35,13 @@ def _build_narration(step_data: dict, prev_positions: dict | None = None) -> lis
 
     # Sensor events
     for ev in step_data.get("sensor_events", []):
-        sensor_type = ev.get("sensor_type", "sensor")
+        event_type = ev.get("event_type", "sensor")
+        pos = ev.get("pos", ["?", "?"])
+        x = pos[0] if isinstance(pos, list) and len(pos) > 0 else "?"
+        y = pos[1] if isinstance(pos, list) and len(pos) > 1 else "?"
         entries.append({
             "type": "sensor",
-            "text": f"{sensor_type.replace('_', ' ').title()} triggered at ({ev.get('x', '?')}, {ev.get('y', '?')})",
+            "text": f"{event_type.replace('_', ' ').title()} at ({x}, {y})",
         })
 
     # Detections
@@ -91,6 +95,7 @@ async def game_websocket(websocket: WebSocket, game_id: str):
         "type": "connected",
         "game_id": game_id,
         "state": game.to_dict(perspective="spectator"),
+            "god_mode": GOD_MODE,
     })
 
     try:
@@ -167,6 +172,8 @@ async def game_websocket(websocket: WebSocket, game_id: str):
                 turn_data = {
                     "type": "turn_result",
                     "turn": result.turn,
+                    "crew": [c.to_dict() for c in game.crew],
+                    "guards": [g.to_dict() for g in game.guards],
                     "crew_positions": result.crew_positions,
                     "guard_positions": result.guard_positions,
                     "sensor_events": result.sensor_events,
@@ -198,6 +205,7 @@ async def game_websocket(websocket: WebSocket, game_id: str):
                     "crew": [c.to_dict() for c in game.crew],
                     "guards": [g.to_dict() for g in game.guards],
                     "event_log": game.event_log[-10:],
+                        "objectives_completed": list(game.objectives_completed),
                 })
 
             elif action == "ai_plan":
@@ -248,6 +256,8 @@ async def game_websocket(websocket: WebSocket, game_id: str):
                     turn_data = {
                         "type": "turn_result",
                         "turn": turn_result.turn,
+                        "crew": [c.to_dict() for c in game.crew],
+                        "guards": [g.to_dict() for g in game.guards],
                         "crew_positions": turn_result.crew_positions,
                         "guard_positions": turn_result.guard_positions,
                         "sensor_events": turn_result.sensor_events,

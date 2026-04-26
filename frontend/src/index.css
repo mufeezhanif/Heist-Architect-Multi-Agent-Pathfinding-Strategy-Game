@@ -8,6 +8,22 @@
   --dark-bg: #050508;
   --panel-bg: rgba(10, 10, 15, 0.85);
   --glass-border: rgba(255, 255, 255, 0.1);
+  --text-primary: #ffffff;
+  --text-secondary: #c8d3ec;
+  --text-muted: #93a3c8;
+}
+
+:root[data-theme='light'] {
+  --neon-cyan: #0aa2c7;
+  --neon-magenta: #d02255;
+  --neon-green: #148f57;
+  --neon-yellow: #b07f00;
+  --dark-bg: #edf3fb;
+  --panel-bg: rgba(255, 255, 255, 0.82);
+  --glass-border: rgba(15, 42, 63, 0.2);
+  --text-primary: #10243d;
+  --text-secondary: #274564;
+  --text-muted: #4f6784;
 }
 
 * {
@@ -21,7 +37,7 @@ html, body, #root {
   height: 100%;
   overflow: hidden;
   background: var(--dark-bg);
-  color: #fff;
+  color: var(--text-primary);
   font-family: 'Outfit', sans-serif;
   -webkit-font-smoothing: antialiased;
 }
@@ -56,7 +72,7 @@ h1, h2, h3, h4, h5, h6 {
   backdrop-filter: blur(12px);
   border: 1px solid var(--glass-border);
   border-radius: 12px;
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.22);
 }
 
 /* Scrollbar customization */

@@ -31,9 +31,11 @@ class CanvasErrorBoundary extends Component<{ children: ReactNode }, { hasError:
 
 export default function GameScene() {
   const building = useGameStore((s) => s.building)
+  const uiTheme = useGameStore((s) => s.uiTheme)
 
   const cx = building ? building.width / 2 : 10
   const cz = building ? building.height / 2 : 10
+  const isLight = uiTheme === 'light'
 
   return (
   <CanvasErrorBoundary>
@@ -48,12 +50,12 @@ export default function GameScene() {
       gl={{ antialias: false, alpha: false, powerPreference: 'high-performance', precision: 'lowp' }}
       dpr={[1, 1.5]}
     >
-      {/* Lighting — dark cyberpunk */}
-      <ambientLight intensity={0.35} color="#3a4a6a" />
-      <directionalLight position={[20, 30, 10]} intensity={0.7} color="#556699" castShadow shadow-mapSize-width={1024} shadow-mapSize-height={1024} shadow-camera-left={-50} shadow-camera-right={50} shadow-camera-top={50} shadow-camera-bottom={-50} />
+      {/* Lighting */}
+      <ambientLight intensity={isLight ? 0.55 : 0.2} color={isLight ? '#dfe8f6' : '#2a2a4a'} />
+      <directionalLight position={[20, 30, 10]} intensity={isLight ? 0.95 : 0.6} color={isLight ? '#ffffff' : '#444488'} />
 
       {/* Fog */}
-      <fog attach="fog" args={['#050508', 35, 80]} />
+      <fog attach="fog" args={[isLight ? '#e7effa' : '#050508', 35, 90]} />
 
       {/* Scene */}
       <Building3D />
@@ -65,11 +67,15 @@ export default function GameScene() {
       {/* Camera controls */}
       <OrbitControls
         target={[cx, 0, cz]}
-        maxPolarAngle={Math.PI / 2.2}
-        minPolarAngle={Math.PI / 8}
-        minDistance={10}
-        maxDistance={60}
+        maxPolarAngle={Math.PI - 0.05}
+        minPolarAngle={0.05}
+        minDistance={4}
+        maxDistance={120}
         enablePan
+        screenSpacePanning
+        zoomToCursor
+        enableDamping
+        dampingFactor={0.08}
       />
     </Canvas>
   </CanvasErrorBoundary>

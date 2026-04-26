@@ -23,9 +23,13 @@ async function get<T>(url: string): Promise<T> {
 
 // ── Game API ──
 export async function createGame(mode: string = 'pvai') {
+  const backendMode =
+    mode === 'pvai' ? 'pva_mastermind'
+      : mode === 'spectator' ? 'ai_vs_ai'
+        : mode
   const data = await post<{ game_id: string; building: unknown; state: unknown }>(
     '/game/create',
-    { mode },
+    { mode: backendMode },
   )
   return data
 }
@@ -69,7 +73,13 @@ export function connectWebSocket(gameId: string) {
           if (data.state.guards) s.setGuards(data.state.guards.map(normalizeGuard))
           if (data.state.event_log) s.setEventLog(data.state.event_log)
           if (data.state.alert_level !== undefined) s.setAlertLevel(data.state.alert_level)
+          if (data.state.max_turns !== undefined) s.setMaxTurns(data.state.max_turns)
+          if (data.state.bayesian_heatmap && Object.keys(data.state.bayesian_heatmap).length > 0)
+            s.setBayesianHeatmap(data.state.bayesian_heatmap)
         }
+          if (data.god_mode) {
+            useGameStore.setState({ godMode: true } as Record<string, unknown>)
+          }
         break
 
       case 'cbs_event':
@@ -97,6 +107,7 @@ export function connectWebSocket(gameId: string) {
           useGameStore.setState({ _autoExecuteAfterPlan: false } as Record<string, unknown>)
           sendWS({ action: 'execute' })
         }
+
         break
 
       case 'step':
@@ -139,6 +150,13 @@ export function connectWebSocket(gameId: string) {
       case 'turn_result':
         s.setTurnResult(data)
 
+        if (data.crew) {
+          s.setCrew(data.crew.map(normalizeAgent))
+        }
+        if (data.guards) {
+          s.setGuards(data.guards.map(normalizeGuard))
+        }
+
         // Add algorithm narration
         if (data.algorithms_used) {
           const algos = data.algorithms_used
@@ -153,7 +171,7 @@ export function connectWebSocket(gameId: string) {
           }
         }
 
-        // Update crew/guard positions
+        // Update positions (even if full snapshots were not provided)
         if (data.crew_positions) {
           s.setCrew(
             s.crew.map((c) => ({
@@ -178,6 +196,7 @@ export function connectWebSocket(gameId: string) {
           s.setPlanning(false)
           s.setExecutionMode('idle')
         }
+
         break
 
       case 'ability_result':
@@ -193,11 +212,15 @@ export function connectWebSocket(gameId: string) {
         if (data.event_log) {
           s.setEventLog(data.event_log)
         }
+          if (Array.isArray(data.objectives_completed)) {
+            s.setObjectivesCompleted(data.objectives_completed as string[])
+          }
         break
 
       case 'state':
         if (data.state?.crew) s.setCrew(data.state.crew.map(normalizeAgent))
         if (data.state?.guards) s.setGuards(data.state.guards.map(normalizeGuard))
+        if (data.state?.max_turns !== undefined) s.setMaxTurns(data.state.max_turns)
         break
     }
   }

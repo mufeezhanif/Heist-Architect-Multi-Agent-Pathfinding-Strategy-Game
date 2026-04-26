@@ -1,4 +1,5 @@
 /* ── SensorLog — recent sensor events display ── */
+import { useState } from 'react'
 import { useGameStore } from '../store/gameStore'
 
 const EVENT_COLORS: Record<string, string> = {
@@ -14,15 +15,25 @@ const EVENT_COLORS: Record<string, string> = {
 const s: Record<string, React.CSSProperties> = {
   panel: {
     position: 'absolute',
-    top: 200,
+    top: 84,
     left: 12,
     width: 220,
-    maxHeight: 200,
+    maxHeight: 180,
     background: 'rgba(10, 10, 25, 0.85)',
     border: '1px solid rgba(0, 212, 255, 0.2)',
     borderRadius: 8,
     overflow: 'hidden',
-    zIndex: 12,
+    zIndex: 8,
+    backdropFilter: 'blur(8px)',
+    pointerEvents: 'auto',
+  },
+  panelInline: {
+    position: 'relative',
+    width: '100%',
+    background: 'rgba(10, 10, 25, 0.85)',
+    border: '1px solid rgba(0, 212, 255, 0.2)',
+    borderRadius: 8,
+    overflow: 'hidden',
     backdropFilter: 'blur(8px)',
   },
   title: {
@@ -33,6 +44,10 @@ const s: Record<string, React.CSSProperties> = {
     textTransform: 'uppercase' as const,
     letterSpacing: 2,
     borderBottom: '1px solid rgba(0, 212, 255, 0.1)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    cursor: 'pointer',
   },
   list: {
     padding: '4px 12px',
@@ -46,10 +61,23 @@ const s: Record<string, React.CSSProperties> = {
     fontSize: 11,
     fontFamily: 'monospace',
   },
+  collapseBtn: {
+    border: '1px solid rgba(0, 212, 255, 0.25)',
+    borderRadius: 4,
+    background: 'rgba(0,0,0,0.3)',
+    color: '#00d4ff',
+    fontSize: 9,
+    fontFamily: 'monospace',
+    padding: '2px 6px',
+    cursor: 'pointer',
+  },
 }
 
-export default function SensorLog() {
+interface Props { inline?: boolean }
+
+export default function SensorLog({ inline = false }: Props = {}) {
   const sensorEvents = useGameStore((st) => st.sensorEvents)
+  const [collapsed, setCollapsed] = useState(inline ? false : true)
 
   // Only show trigger events, not silent ones
   const triggers = sensorEvents.filter(
@@ -58,29 +86,44 @@ export default function SensorLog() {
 
   if (triggers.length === 0) return null
 
+  const recent = triggers.slice(-8)
+
   return (
-    <div style={s.panel}>
-      <div style={s.title}>Sensor Alerts</div>
-      <div style={s.list}>
-        {triggers.map((ev, i) => (
-          <div key={i} style={s.event}>
-            <span style={{
-              width: 6,
-              height: 6,
-              borderRadius: '50%',
-              background: EVENT_COLORS[ev.event_type] || '#555',
-              marginTop: 4,
-              flexShrink: 0,
-            }} />
-            <span style={{ color: EVENT_COLORS[ev.event_type] || '#888' }}>
-              {ev.event_type.replace('_', ' ')}
-            </span>
-            <span style={{ color: '#555' }}>
-              ({ev.pos[0]},{ev.pos[1]})
-            </span>
-          </div>
-        ))}
+    <div style={inline ? s.panelInline : s.panel}>
+      <div style={s.title}>
+        <span>Sensor Alerts ({triggers.length})</span>
+        <button
+          style={s.collapseBtn}
+          onClick={(e) => {
+            e.stopPropagation()
+            setCollapsed((v) => !v)
+          }}
+        >
+          {collapsed ? 'SHOW' : 'HIDE'}
+        </button>
       </div>
+      {!collapsed && (
+        <div style={s.list}>
+          {recent.map((ev, i) => (
+            <div key={`${ev.event_type}-${ev.pos[0]}-${ev.pos[1]}-${i}`} style={s.event}>
+              <span style={{
+                width: 6,
+                height: 6,
+                borderRadius: '50%',
+                background: EVENT_COLORS[ev.event_type] || '#555',
+                marginTop: 4,
+                flexShrink: 0,
+              }} />
+              <span style={{ color: EVENT_COLORS[ev.event_type] || '#888' }}>
+                {ev.event_type.replace('_', ' ')}
+              </span>
+              <span style={{ color: 'var(--text-muted)' }}>
+                ({ev.pos[0]},{ev.pos[1]})
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   )
 }

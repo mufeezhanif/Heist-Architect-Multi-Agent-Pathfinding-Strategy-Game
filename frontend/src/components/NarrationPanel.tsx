@@ -27,6 +27,18 @@ const s: Record<string, React.CSSProperties> = {
     display: 'flex',
     flexDirection: 'column',
   },
+  panelInline: {
+    position: 'relative',
+    width: '100%',
+    maxHeight: 360,
+    background: 'rgba(10, 10, 25, 0.92)',
+    border: '1px solid rgba(0, 212, 255, 0.2)',
+    borderRadius: 8,
+    overflow: 'hidden',
+    backdropFilter: 'blur(8px)',
+    display: 'flex',
+    flexDirection: 'column',
+  },
   header: {
     padding: '8px 12px',
     fontSize: 10,
@@ -42,7 +54,7 @@ const s: Record<string, React.CSSProperties> = {
   },
   headerDesc: {
     fontSize: 9,
-    color: '#666',
+    color: 'var(--text-muted)',
     fontWeight: 400,
     letterSpacing: 0,
     textTransform: 'none',
@@ -73,11 +85,13 @@ const s: Record<string, React.CSSProperties> = {
     textAlign: 'center',
     fontSize: 11,
     fontFamily: 'monospace',
-    color: '#444',
+    color: 'var(--text-muted)',
   },
 }
 
-export default function NarrationPanel() {
+interface Props { inline?: boolean }
+
+export default function NarrationPanel({ inline = false }: Props = {}) {
   const narrationEntries = useGameStore((s) => s.narrationEntries)
   const listRef = useRef<HTMLDivElement>(null)
 
@@ -89,7 +103,7 @@ export default function NarrationPanel() {
   }, [narrationEntries])
 
   return (
-    <div style={s.panel}>
+    <div style={inline ? s.panelInline : s.panel}>
       <div style={s.header}>
         <span>Play-by-Play</span>
         <span style={s.headerDesc}>What's happening & why</span>

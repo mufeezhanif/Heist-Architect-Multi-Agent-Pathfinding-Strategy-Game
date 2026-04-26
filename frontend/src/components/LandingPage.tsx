@@ -281,6 +281,7 @@ export default function LandingPage() {
             <Eye size={20} />
             Watch AI vs AI
           </motion.button>
+
         </motion.div>
 
         <motion.div 

@@ -84,6 +84,7 @@ export interface GameState {
 
   // Turn state
   turn: number
+  maxTurns: number
   gameStatus: 'active' | 'won' | 'lost'
   score: number
   objectivesCompleted: string[]
@@ -128,6 +129,11 @@ export interface GameState {
   showHelp: boolean
   showHowToPlay: boolean
 
+  // UI settings
+  showSecurityLabels: boolean
+  uiTheme: 'dark' | 'light'
+    godMode: boolean
+
   // Actions
   setScreen: (s: 'landing' | 'game') => void
   setGameMode: (m: 'pvai' | 'spectator') => void
@@ -143,6 +149,7 @@ export interface GameState {
   addCBSEvent: (e: CBSEvent) => void
   clearCBSEvents: () => void
   setPlanning: (p: boolean) => void
+  setMaxTurns: (n: number) => void
   setTurnResult: (r: TurnResult) => void
   setBayesianHeatmap: (h: Record<string, number>) => void
   setMinimaxLog: (l: Record<string, unknown>[]) => void
@@ -169,7 +176,10 @@ export interface GameState {
   clearNarration: () => void
   setShowHelp: (show: boolean) => void
   setShowHowToPlay: (show: boolean) => void
+  setShowSecurityLabels: (show: boolean) => void
+  toggleTheme: () => void
   reset: () => void
+    setObjectivesCompleted: (list: string[]) => void
 }
 
 const initialState = {
@@ -186,6 +196,7 @@ const initialState = {
   cbsEvents: [] as CBSEvent[],
   planning: false,
   turn: 0,
+  maxTurns: 50,
   gameStatus: 'active' as const,
   score: 0,
   objectivesCompleted: [] as string[],
@@ -213,6 +224,9 @@ const initialState = {
   narrationEntries: [] as { text: string; type: 'move' | 'sensor' | 'warden' | 'objective' | 'alert' | 'info' }[],
   showHelp: false,
   showHowToPlay: false,
+  showSecurityLabels: true,
+  uiTheme: 'dark' as const,
+    godMode: false,
 }
 
 export const useGameStore = create<GameState>((set) => ({
@@ -233,6 +247,7 @@ export const useGameStore = create<GameState>((set) => ({
   addCBSEvent: (e) => set((s) => ({ cbsEvents: [...s.cbsEvents, e] })),
   clearCBSEvents: () => set({ cbsEvents: [] }),
   setPlanning: (p) => set({ planning: p }),
+  setMaxTurns: (n) => set({ maxTurns: n }),
   setTurnResult: (r) =>
     set({
       turnResult: r,
@@ -278,5 +293,8 @@ export const useGameStore = create<GameState>((set) => ({
   clearNarration: () => set({ narrationEntries: [] }),
   setShowHelp: (show) => set({ showHelp: show }),
   setShowHowToPlay: (show) => set({ showHowToPlay: show }),
+  setShowSecurityLabels: (show) => set({ showSecurityLabels: show }),
+  toggleTheme: () => set((s) => ({ uiTheme: s.uiTheme === 'dark' ? 'light' : 'dark' })),
   reset: () => set(initialState),
+    setObjectivesCompleted: (list) => set({ objectivesCompleted: list }),
 }))

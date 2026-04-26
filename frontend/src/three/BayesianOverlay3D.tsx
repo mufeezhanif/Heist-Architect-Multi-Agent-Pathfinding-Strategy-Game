@@ -19,17 +19,41 @@ function probToColor(p: number): THREE.Color {
 export default function BayesianOverlay3D() {
   const heatmap = useGameStore((s) => s.bayesianHeatmap)
   const show = useGameStore((s) => s.showBayesian)
+  const guards = useGameStore((s) => s.guards)
 
   const cells = useMemo(() => {
     if (!show) return []
-    return Object.entries(heatmap)
+    const entries = Object.entries(heatmap)
       .map(([key, prob]) => {
         const [x, y] = key.split(',').map(Number)
-        if (isNaN(x) || isNaN(y) || prob < 0.01) return null
-        return { x, y, prob, color: probToColor(prob) }
+        if (isNaN(x) || isNaN(y) || prob <= 0) return null
+        return { x, y, prob }
       })
-      .filter(Boolean) as { x: number; y: number; prob: number; color: THREE.Color }[]
-  }, [heatmap, show])
+      .filter(Boolean) as { x: number; y: number; prob: number }[]
+
+    if (entries.length === 0) return []
+
+    const nearGuards = entries.filter((cell) =>
+      guards.some((g) => Math.abs(g.pos[0] - cell.x) + Math.abs(g.pos[1] - cell.y) <= 10),
+    )
+
+    const candidates = nearGuards.length > 0 ? nearGuards : entries
+    const candidateMaxProb = Math.max(...candidates.map((c) => c.prob), 0.0001)
+
+    return candidates
+      .filter((c) => c.prob / candidateMaxProb >= 0.05)
+      .sort((a, b) => b.prob - a.prob)
+      .slice(0, 220)
+      .map((c) => {
+        const intensity = Math.min(1, c.prob / candidateMaxProb)
+        return {
+          x: c.x,
+          y: c.y,
+          prob: intensity,
+          color: probToColor(intensity),
+        }
+      })
+  }, [heatmap, show, guards])
 
   if (!show || cells.length === 0) return null
 
@@ -41,9 +65,9 @@ export default function BayesianOverlay3D() {
           <meshStandardMaterial
             color={color}
             emissive={color}
-            emissiveIntensity={prob * 0.5}
+            emissiveIntensity={0.3 + prob * 1.1}
             transparent
-            opacity={Math.min(prob * 2, 0.7)}
+            opacity={Math.min(0.25 + prob * 0.65, 0.88)}
             side={THREE.DoubleSide}
           />
         </mesh>

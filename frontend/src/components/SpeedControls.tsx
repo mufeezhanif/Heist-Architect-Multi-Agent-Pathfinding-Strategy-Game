@@ -19,6 +19,18 @@ const s: Record<string, React.CSSProperties> = {
     zIndex: 15,
     minWidth: 160,
   },
+  panelInline: {
+    position: 'relative',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 6,
+    background: 'rgba(10, 10, 25, 0.85)',
+    border: '1px solid rgba(0, 212, 255, 0.25)',
+    borderRadius: 8,
+    padding: '10px 14px',
+    backdropFilter: 'blur(8px)',
+    width: '100%',
+  },
   title: {
     fontSize: 10,
     color: '#00d4ff',
@@ -29,7 +41,7 @@ const s: Record<string, React.CSSProperties> = {
   },
   desc: {
     fontSize: 9,
-    color: '#555',
+    color: 'var(--text-muted)',
     fontFamily: 'monospace',
     marginBottom: 4,
     lineHeight: 1.4,
@@ -48,12 +60,12 @@ const s: Record<string, React.CSSProperties> = {
     fontFamily: 'monospace',
     fontSize: 11,
     background: 'transparent',
-    color: '#e0e0e0',
+    color: 'var(--text-primary)',
     transition: 'all 0.15s',
   },
   label: {
     fontSize: 12,
-    color: '#ccc',
+    color: 'var(--text-secondary)',
     fontFamily: 'monospace',
   },
   speedBtn: {
@@ -92,13 +104,13 @@ const s: Record<string, React.CSSProperties> = {
   stepCounter: {
     fontSize: 10,
     fontFamily: 'monospace',
-    color: '#666',
+    color: 'var(--text-muted)',
     textAlign: 'center' as const,
     marginTop: 4,
   },
 }
 
-export default function SpeedControls() {
+export default function SpeedControls({ inline = false }: { inline?: boolean } = {}) {
   const gameMode = useGameStore((st) => st.gameMode)
   const aiRunning = useGameStore((st) => st.aiRunning)
   const setAiRunning = useGameStore((st) => st.setAiRunning)
@@ -183,16 +195,16 @@ export default function SpeedControls() {
   }
 
   const vizToggles: { key: 'showCBSTree' | 'showBayesian' | 'showMinimax' | 'showAstarViz'; label: string; desc: string; active: boolean }[] = [
-    { key: 'showCBSTree', label: 'CBS Tree', desc: 'Path planning algorithm', active: showCBSTree },
-    { key: 'showBayesian', label: 'Bayesian', desc: 'Warden suspicion map', active: showBayesian },
-    { key: 'showMinimax', label: 'Minimax', desc: 'Warden strategy tree', active: showMinimax },
-    { key: 'showAstarViz', label: 'A* Viz', desc: 'Pathfinding visualization', active: showAstarViz },
+    { key: 'showCBSTree', label: 'Route Plan (CBS)', desc: 'Shows how AI finds collision-free crew paths', active: showCBSTree },
+    { key: 'showBayesian', label: 'Suspicion Map 🗺️', desc: 'Shows guard suspicion as colored tiles on the maze', active: showBayesian },
+    { key: 'showMinimax', label: 'Guard Strategy', desc: 'Shows how guards decide their best moves', active: showMinimax },
+    { key: 'showAstarViz', label: 'A* Pathfinder', desc: 'Shows individual pathfinding visualization', active: showAstarViz },
   ]
 
   const hasSteps = stepQueue.length > 0
 
   return (
-    <div style={s.panel}>
+    <div style={inline ? s.panelInline : s.panel}>
       <div style={s.title}>AI Visualizations</div>
       <div style={s.desc}>Toggle algorithm panels to see how the AI works</div>
       {vizToggles.map((v) => (
@@ -203,7 +215,7 @@ export default function SpeedControls() {
               ...s.toggleBtn,
               background: v.active ? 'rgba(0, 212, 255, 0.15)' : 'transparent',
               borderColor: v.active ? '#00d4ff' : 'rgba(255,255,255,0.15)',
-              color: v.active ? '#00d4ff' : '#666',
+              color: v.active ? '#00d4ff' : 'var(--text-muted)',
             }}
             onClick={() => toggleViz(v.key)}
             title={v.desc}
