@@ -240,13 +240,13 @@ function CrewAgent({ agent }: { agent: { agent_id: string; role: string; pos: [n
       {/* Selection ring */}
       {isSelected && (
         <mesh position={[0, 0.02, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-          <ringGeometry args={[0.3, 0.38, 16]} />
-          <meshStandardMaterial color={color} emissive={color} emissiveIntensity={1.5} transparent opacity={0.7} side={THREE.DoubleSide} />
+          <ringGeometry args={[0.3, 0.38, 8]} />
+          <meshStandardMaterial color={color} emissive={color} emissiveIntensity={1.2} transparent opacity={0.7} side={THREE.DoubleSide} />
         </mesh>
       )}
 
-      {/* Glow light */}
-      <pointLight position={[0, 0.6, 0]} color={color} intensity={isSelected ? 1.2 : 0.5} distance={2.5} />
+      {/* Glow light - only when selected */}
+      {isSelected && <pointLight position={[0, 0.6, 0]} color={color} intensity={0.6} distance={2} />}
 
       {/* Floating label */}
       <Html position={[0, 1, 0]} center style={{ pointerEvents: 'none' }}>

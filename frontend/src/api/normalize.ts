@@ -37,6 +37,7 @@ export function normalizeBuilding(raw: Record<string, unknown>): Building {
         type: c.type as string,
         room_id: (c.room_id as string) || null,
         walkable: (c.walkable as boolean) || false,
+        sensor: (c.sensor as string) || null,
       })),
     ),
     cameras: ((raw.cameras || []) as Record<string, unknown>[]).map((cam) => ({

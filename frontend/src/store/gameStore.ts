@@ -6,6 +6,7 @@ export interface Cell {
   type: string
   room_id: string | null
   walkable: boolean
+  sensor: string | null
 }
 
 export interface Building {

@@ -45,15 +45,15 @@ export default function GameScene() {
         far: 200,
       }}
       style={{ width: '100%', height: '100%' }}
-      gl={{ antialias: false }} // Turn off antialias for postprocessing performance
+      gl={{ antialias: false, alpha: false, powerPreference: 'high-performance', precision: 'lowp' }}
+      dpr={[1, 1.5]}
     >
       {/* Lighting — dark cyberpunk */}
-      <ambientLight intensity={0.2} color="#2a2a4a" />
-      <directionalLight position={[20, 30, 10]} intensity={0.6} color="#444488" />
-      <pointLight position={[cx, 15, cz]} intensity={0.8} color="#00f0ff" distance={50} />
+      <ambientLight intensity={0.35} color="#3a4a6a" />
+      <directionalLight position={[20, 30, 10]} intensity={0.7} color="#556699" castShadow shadow-mapSize-width={1024} shadow-mapSize-height={1024} shadow-camera-left={-50} shadow-camera-right={50} shadow-camera-top={50} shadow-camera-bottom={-50} />
 
       {/* Fog */}
-      <fog attach="fog" args={['#050508', 30, 65]} />
+      <fog attach="fog" args={['#050508', 35, 80]} />
 
       {/* Scene */}
       <Building3D />
