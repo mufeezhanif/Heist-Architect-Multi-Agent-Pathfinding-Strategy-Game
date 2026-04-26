@@ -1,14 +1,8 @@
-prompts/
+.venv/
 __pycache__/
 *.pyc
-.env
-venv/
-.venv/
 node_modules/
 dist/
-build/
-.vscode/
-.idea/
+.vite/
 .DS_Store
-*.egg-info/
-.playwright-mcp
+screenshot.png
