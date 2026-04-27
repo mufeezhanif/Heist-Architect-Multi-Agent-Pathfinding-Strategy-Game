@@ -18,6 +18,13 @@ const s: Record<string, React.CSSProperties> = {
     zIndex: 10,
     width: '320px',
   },
+  containerInline: {
+    position: 'relative',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '8px',
+    width: '100%',
+  },
   badge: {
     display: 'flex',
     alignItems: 'center',
@@ -46,9 +53,14 @@ const s: Record<string, React.CSSProperties> = {
   eventLog: {
     marginTop: '8px',
     padding: '12px',
-    maxHeight: '200px',
+    maxHeight: '180px',
     overflowY: 'auto',
     pointerEvents: 'auto',
+  },
+  eventLogInline: {
+    padding: '10px 12px',
+    maxHeight: '160px',
+    overflowY: 'auto',
   },
   logEntry: {
     fontSize: '0.85rem',
@@ -153,7 +165,7 @@ function labelObjective(objectiveId: string): string {
   return objectiveId.replaceAll('_', ' ')
 }
 
-export default function HUD() {
+export default function HUD({ inline = false }: { inline?: boolean } = {}) {
   const turn = useGameStore((s) => s.turn)
   const maxTurns = useGameStore((s) => s.maxTurns)
   const score = useGameStore((s) => s.score)
@@ -197,7 +209,7 @@ export default function HUD() {
   }
 
   return (
-    <div style={s.container}>
+    <div style={inline ? s.containerInline : s.container}>
         {godMode && (
           <motion.div
             initial={{ opacity: 0, y: -10 }}
@@ -275,7 +287,7 @@ export default function HUD() {
             initial={{ opacity: 0, height: 0 }}
             animate={{ opacity: 1, height: 'auto' }}
             className="glass-panel" 
-            style={s.eventLog}
+            style={inline ? s.eventLogInline : s.eventLog}
           >
             <div style={s.logTitle}><Terminal size={14} /> Event Log</div>
             <div style={{ display: 'flex', flexDirection: 'column-reverse' }}>

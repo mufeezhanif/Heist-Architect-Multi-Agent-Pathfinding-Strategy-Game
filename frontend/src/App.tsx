@@ -3,7 +3,6 @@ import { useEffect } from 'react'
 import { useGameStore } from './store/gameStore'
 import LandingPage from './components/LandingPage'
 import GameScene from './three/GameScene'
-import HUD from './components/HUD'
 import Controls from './components/Controls'
 import GameOverScreen from './components/GameOverScreen'
 import TutorialOverlay from './components/TutorialOverlay'
@@ -35,7 +34,6 @@ export default function App() {
         {gameStatus === 'active' && (
           <>
             <GameScene />
-            <HUD />
             <Controls />
             <HelpButton />
             <TutorialOverlay />
