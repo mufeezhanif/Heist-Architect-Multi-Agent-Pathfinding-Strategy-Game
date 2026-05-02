@@ -103,7 +103,7 @@ export function connectWebSocket(gameId: string) {
         }
 
         // Auto-execute if quick mode triggered it
-        if ((s as Record<string, unknown>)._autoExecuteAfterPlan) {
+        if ((s as unknown as Record<string, unknown>)._autoExecuteAfterPlan) {
           useGameStore.setState({ _autoExecuteAfterPlan: false } as Record<string, unknown>)
           sendWS({ action: 'execute' })
         }
@@ -161,7 +161,7 @@ export function connectWebSocket(gameId: string) {
         if (data.algorithms_used) {
           const algos = data.algorithms_used
           if (algos.bayesian) s.addNarration({ type: 'info', text: `📊 Bayesian: ${algos.bayesian}` })
-          if (algos.minimax) s.addNarration({ type: 'info', text: `🧠 Minimax: ${algos.minimax}` })
+          if (algos.warden) s.addNarration({ type: 'info', text: `🛡️ Warden: ${algos.warden}` })
         }
 
         // Add turn narration

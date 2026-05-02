@@ -2,7 +2,7 @@
 import { useEffect } from 'react'
 import { useGameStore } from './store/gameStore'
 import LandingPage from './components/LandingPage'
-import GameScene from './three/GameScene'
+import GameBoard2D from './components/GameBoard2D'
 import Controls from './components/Controls'
 import GameOverScreen from './components/GameOverScreen'
 import TutorialOverlay from './components/TutorialOverlay'
@@ -33,7 +33,7 @@ export default function App() {
       <main style={{ flex: 1, position: 'relative', minWidth: 0, height: '100vh' }}>
         {gameStatus === 'active' && (
           <>
-            <GameScene />
+            <GameBoard2D />
             <Controls />
             <HelpButton />
             <TutorialOverlay />

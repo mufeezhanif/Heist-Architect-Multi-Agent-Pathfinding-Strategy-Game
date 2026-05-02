@@ -1,7 +1,4 @@
-/* ── LandingPage — cinematic cyberpunk entry screen ── */
-import { Canvas, useFrame } from '@react-three/fiber'
-import { useRef, useMemo } from 'react'
-import * as THREE from 'three'
+import { useMemo } from 'react'
 import { useGameStore } from '../store/gameStore'
 import { createGame, connectWebSocket } from '../api/client'
 import { normalizeAgent, normalizeGuard, normalizeBuilding } from '../api/normalize'
@@ -9,178 +6,188 @@ import HowToPlay from './HowToPlay'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Play, Eye, HelpCircle, BookOpen } from 'lucide-react'
 
-// ── Floating particles ──
-function Particles({ count = 200 }: { count?: number }) {
-  const ref = useRef<THREE.Points>(null)
-
-  const positions = useMemo(() => {
-    const arr = new Float32Array(count * 3)
-    for (let i = 0; i < count * 3; i++) {
-      arr[i] = (Math.random() - 0.5) * 40
-    }
-    return arr
-  }, [count])
-
-  useFrame(({ clock }) => {
-    if (ref.current) {
-      ref.current.rotation.y = clock.getElapsedTime() * 0.015
-      ref.current.rotation.x = Math.sin(clock.getElapsedTime() * 0.01) * 0.05
-    }
-  })
-
-  return (
-    <points ref={ref}>
-      <bufferGeometry>
-        <bufferAttribute attach="attributes-position" count={count} array={positions} itemSize={3} />
-      </bufferGeometry>
-      <pointsMaterial color="#00f0ff" size={0.08} transparent opacity={0.8} sizeAttenuation blending={THREE.AdditiveBlending} />
-    </points>
-  )
-}
-
-// ── Slowly rotating wireframe building ──
-function RotatingBuilding() {
-  const ref = useRef<THREE.Group>(null)
-
-  useFrame(({ clock }) => {
-    if (ref.current) {
-      ref.current.rotation.y = clock.getElapsedTime() * 0.05
-    }
-  })
-
-  return (
-    <group ref={ref} position={[0, -2, 0]}>
-      {/* A simple wireframe grid representing the building */}
-      {Array.from({ length: 7 }).map((_, row) =>
-        Array.from({ length: 7 }).map((_, col) => {
-          const h = 0.5 + Math.random() * 2.5
-          return (
-            <mesh key={`${row}-${col}`} position={[(row - 3) * 1.5, h / 2, (col - 3) * 1.5]}>
-              <boxGeometry args={[1.2, h, 1.2]} />
-              <meshStandardMaterial
-                color="#0a192f"
-                emissive="#00f0ff"
-                emissiveIntensity={0.1}
-                wireframe
-                transparent
-                opacity={0.3}
-              />
-            </mesh>
-          )
-        }),
-      )}
-      {/* Neon floor grid */}
-      <gridHelper args={[15, 15, '#00f0ff', '#050508']} />
-    </group>
-  )
-}
-
 const s: Record<string, React.CSSProperties> = {
   container: {
     position: 'relative',
     width: '100%',
     height: '100%',
     overflow: 'hidden',
+    background:
+      'radial-gradient(circle at 15% 10%, rgba(84, 198, 255, 0.2), transparent 30%), radial-gradient(circle at 85% 85%, rgba(255, 104, 73, 0.2), transparent 35%), linear-gradient(155deg, #0a1120, #101a30 55%, #0d182a)',
+  },
+  gridBackdrop: {
+    position: 'absolute',
+    inset: 0,
+    backgroundImage:
+      'linear-gradient(rgba(148, 163, 184, 0.09) 1px, transparent 1px), linear-gradient(90deg, rgba(148, 163, 184, 0.09) 1px, transparent 1px)',
+    backgroundSize: '34px 34px',
+    maskImage: 'linear-gradient(to bottom, transparent 0%, black 12%, black 88%, transparent 100%)',
+  },
+  boardPreview: {
+    position: 'absolute',
+    right: '6%',
+    top: '16%',
+    width: 'min(38vw, 500px)',
+    aspectRatio: '30 / 25',
+    borderRadius: 16,
+    overflow: 'hidden',
+    border: '1px solid rgba(148, 163, 184, 0.35)',
+    boxShadow: '0 20px 48px rgba(0, 0, 0, 0.45)',
+    background: '#0b1322',
+  },
+  boardPreviewGrid: {
+    display: 'grid',
+    width: '100%',
+    height: '100%',
+    gridTemplateColumns: 'repeat(30, 1fr)',
+    gridTemplateRows: 'repeat(25, 1fr)',
   },
   overlay: {
     position: 'absolute',
     inset: 0,
     display: 'flex',
-    flexDirection: 'column',
     alignItems: 'center',
-    justifyContent: 'center',
+    padding: 'min(8vh, 72px) 7%',
+    gap: '6%',
     zIndex: 10,
-    pointerEvents: 'none',
-    background: 'radial-gradient(circle at center, transparent 0%, rgba(5,5,8,0.8) 100%)',
+  },
+  leftColumn: {
+    maxWidth: 620,
+    width: '100%',
+  },
+  badge: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 8,
+    border: '1px solid rgba(152, 178, 208, 0.35)',
+    background: 'rgba(7, 13, 26, 0.52)',
+    borderRadius: 999,
+    padding: '6px 14px',
+    color: '#9ad6ff',
+    fontFamily: 'Space Grotesk, sans-serif',
+    textTransform: 'uppercase',
+    letterSpacing: '0.12em',
+    fontWeight: 700,
+    fontSize: '0.72rem',
+    marginBottom: 18,
   },
   title: {
-    fontSize: '5rem',
-    fontWeight: 800,
-    letterSpacing: '0.2em',
-    color: '#fff',
-    textShadow: '0 0 20px var(--neon-cyan), 0 0 40px var(--neon-cyan)',
-    marginBottom: '0.5rem',
-    textAlign: 'center',
+    fontSize: 'clamp(2.2rem, 5vw, 4.6rem)',
+    lineHeight: 0.95,
+    fontFamily: 'Space Grotesk, sans-serif',
+    letterSpacing: '0.03em',
+    color: '#f3f7ff',
+    marginBottom: 16,
+    textWrap: 'balance',
   },
   subtitle: {
-    fontSize: '1.2rem',
-    color: 'var(--neon-cyan)',
-    letterSpacing: '0.4em',
-    textTransform: 'uppercase',
-    marginBottom: '2rem',
-    fontWeight: 600,
-    textShadow: '0 0 10px rgba(0, 240, 255, 0.5)',
+    fontSize: 'clamp(1rem, 1.7vw, 1.2rem)',
+    color: '#b9c7dd',
+    lineHeight: 1.6,
+    maxWidth: 580,
+    marginBottom: 24,
   },
-  pitch: {
-    fontSize: '1.1rem',
-    color: '#a8b2d1',
-    textAlign: 'center',
-    maxWidth: '600px',
-    lineHeight: 1.8,
-    marginBottom: '3rem',
-    backdropFilter: 'blur(4px)',
-    padding: '1.5rem',
-    borderRadius: '12px',
-    background: 'rgba(10, 25, 47, 0.4)',
-    border: '1px solid rgba(0, 240, 255, 0.1)',
+  algorithmPills: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 26,
+  },
+  pill: {
+    padding: '6px 10px',
+    borderRadius: 999,
+    border: '1px solid rgba(140, 170, 203, 0.35)',
+    color: '#d4deef',
+    fontSize: '0.76rem',
+    fontFamily: 'monospace',
+    background: 'rgba(8, 16, 30, 0.55)',
   },
   btnGroup: {
     display: 'flex',
-    gap: '24px',
-    pointerEvents: 'auto',
+    gap: 12,
     flexWrap: 'wrap',
-    justifyContent: 'center',
   },
-  secondaryBtnGroup: {
-    display: 'flex',
-    gap: '16px',
-    pointerEvents: 'auto',
-    marginTop: '24px',
-    flexWrap: 'wrap',
-    justifyContent: 'center',
-  },
-  btnBase: {
-    display: 'flex',
+  primaryBtn: {
+    display: 'inline-flex',
     alignItems: 'center',
-    gap: '10px',
-    padding: '16px 40px',
-    borderRadius: '8px',
-    fontSize: '1.1rem',
+    gap: 8,
+    border: '1px solid #7dd3fc',
+    color: '#05111f',
+    background: 'linear-gradient(135deg, #7dd3fc, #38bdf8)',
+    padding: '12px 18px',
+    borderRadius: 10,
+    fontFamily: 'Space Grotesk, sans-serif',
     fontWeight: 700,
+    letterSpacing: '0.04em',
     cursor: 'pointer',
-    textTransform: 'uppercase',
-    letterSpacing: '0.1em',
-    transition: 'all 0.3s ease',
-    border: 'none',
-    position: 'relative',
-    overflow: 'hidden',
+  },
+  secondaryBtn: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 8,
+    border: '1px solid rgba(249, 115, 22, 0.8)',
+    color: '#ffd8bf',
+    background: 'rgba(249, 115, 22, 0.14)',
+    padding: '12px 18px',
+    borderRadius: 10,
+    fontFamily: 'Space Grotesk, sans-serif',
+    fontWeight: 700,
+    letterSpacing: '0.04em',
+    cursor: 'pointer',
+  },
+  ghostBtn: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    gap: 8,
+    border: '1px solid rgba(148, 163, 184, 0.55)',
+    color: '#d6e0ee',
+    background: 'rgba(8, 16, 30, 0.6)',
+    padding: '11px 16px',
+    borderRadius: 10,
+    fontFamily: 'Space Grotesk, sans-serif',
+    fontWeight: 600,
+    letterSpacing: '0.03em',
+    cursor: 'pointer',
   },
   footer: {
     position: 'absolute',
-    bottom: '24px',
-    fontSize: '0.8rem',
-    color: '#64ffda',
-    letterSpacing: '0.2em',
-    zIndex: 10,
-    opacity: 0.7,
+    left: 24,
+    bottom: 16,
+    fontSize: '0.72rem',
+    color: '#9fb1cc',
+    letterSpacing: '0.08em',
+    opacity: 0.82,
   },
 }
 
+function buildPreviewCells() {
+  return Array.from({ length: 25 * 30 }).map((_, idx) => {
+    const x = idx % 30
+    const y = Math.floor(idx / 30)
+    if (x === 0 || y === 0 || x === 29 || y === 24) return '#1f2a44'
+    if ((x + y) % 13 === 0) return '#4b2240'
+    if (x > 10 && x < 22 && y > 8 && y < 20) return '#13233b'
+    return '#0f1a2d'
+  })
+}
+
 export default function LandingPage() {
-  const setScreen = useGameStore((s) => s.setScreen)
-  const setGameMode = useGameStore((s) => s.setGameMode)
-  const setGameId = useGameStore((s) => s.setGameId)
-  const setBuilding = useGameStore((s) => s.setBuilding)
-  const setCrew = useGameStore((s) => s.setCrew)
-  const setGuards = useGameStore((s) => s.setGuards)
-  const setIsTutorial = useGameStore((s) => s.setIsTutorial)
-  const setTutorialStep = useGameStore((s) => s.setTutorialStep)
-  const setShowHowToPlay = useGameStore((s) => s.setShowHowToPlay)
-  const showHowToPlay = useGameStore((s) => s.showHowToPlay)
+  const setScreen = useGameStore((st) => st.setScreen)
+  const setGameMode = useGameStore((st) => st.setGameMode)
+  const setGameId = useGameStore((st) => st.setGameId)
+  const setBuilding = useGameStore((st) => st.setBuilding)
+  const setCrew = useGameStore((st) => st.setCrew)
+  const setGuards = useGameStore((st) => st.setGuards)
+  const setIsTutorial = useGameStore((st) => st.setIsTutorial)
+  const setTutorialStep = useGameStore((st) => st.setTutorialStep)
+  const setShowHowToPlay = useGameStore((st) => st.setShowHowToPlay)
+  const showHowToPlay = useGameStore((st) => st.showHowToPlay)
+
+  const previewCells = useMemo(buildPreviewCells, [])
 
   const startGame = async (mode: 'pvai' | 'spectator', tutorial = false) => {
     try {
-      const data = await createGame(mode) as {
+      const data = (await createGame(mode)) as {
         game_id: string
         building: Record<string, unknown>
         state: { crew: Record<string, unknown>[]; guards: Record<string, unknown>[] }
@@ -203,145 +210,87 @@ export default function LandingPage() {
 
   return (
     <div style={s.container}>
-      {/* 3D Background */}
-      <Canvas camera={{ position: [0, 6, 12], fov: 55 }} style={{ position: 'absolute', inset: 0 }}>
-        <ambientLight intensity={0.2} />
-        <pointLight position={[5, 5, 5]} intensity={0.8} color="#00f0ff" />
-        <pointLight position={[-5, 3, -5]} intensity={0.5} color="#ff003c" />
-        <fog attach="fog" args={['#050508', 10, 30]} />
-        <RotatingBuilding />
-        <Particles />
-      </Canvas>
+      <div style={s.gridBackdrop} />
 
-      {/* Overlay */}
+      <motion.div
+        style={s.boardPreview}
+        initial={{ opacity: 0, y: 24, rotate: 2 }}
+        animate={{ opacity: 1, y: 0, rotate: 0 }}
+        transition={{ duration: 0.8, ease: 'easeOut' }}
+      >
+        <div style={s.boardPreviewGrid}>
+          {previewCells.map((color, i) => (
+            <div key={i} style={{ background: color, border: '1px solid rgba(120, 145, 173, 0.08)' }} />
+          ))}
+        </div>
+      </motion.div>
+
       <div style={s.overlay}>
         <motion.div
-          initial={{ opacity: 0, y: -50 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, ease: "easeOut" }}
-          style={s.title}
-          className="glitch-hover"
-        >
-          HEIST ARCHITECT
-        </motion.div>
-        
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 1, delay: 0.4 }}
-          style={s.subtitle}
-        >
-          Multi-Agent Pathfinding Strategy Game
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ duration: 0.8, delay: 0.8 }}
-          style={s.pitch}
-          className="glass-panel"
-        >
-          Command a crew of 3 elite specialists to pull off the perfect heist.
-          Navigate guards, cameras, and laser sensors in this turn-based strategy game powered by <strong>5 advanced AI algorithms</strong>.
-          Outsmart the AI Warden — or watch two AIs battle it out in real-time.
-        </motion.div>
-
-        <motion.div 
-          style={s.btnGroup}
+          style={s.leftColumn}
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.8, delay: 1.2 }}
+          transition={{ duration: 0.7, ease: 'easeOut' }}
         >
-          <motion.button
-            whileHover={{ scale: 1.05, boxShadow: '0 0 20px var(--neon-cyan)' }}
-            whileTap={{ scale: 0.95 }}
-            style={{
-              ...s.btnBase,
-              background: 'rgba(0, 240, 255, 0.1)',
-              color: 'var(--neon-cyan)',
-              border: '2px solid var(--neon-cyan)',
-            }}
-            onClick={() => startGame('pvai')}
-          >
-            <Play size={20} />
-            Play as Mastermind
-          </motion.button>
-          
-          <motion.button
-            whileHover={{ scale: 1.05, boxShadow: '0 0 20px var(--neon-magenta)' }}
-            whileTap={{ scale: 0.95 }}
-            style={{
-              ...s.btnBase,
-              background: 'rgba(255, 0, 60, 0.1)',
-              color: 'var(--neon-magenta)',
-              border: '2px solid var(--neon-magenta)',
-            }}
-            onClick={() => startGame('spectator')}
-          >
-            <Eye size={20} />
-            Watch AI vs AI
-          </motion.button>
+          <div style={s.badge}>Top-Down Tactical View</div>
+          <h1 style={s.title}>HEIST ARCHITECT</h1>
+          <p style={s.subtitle}>
+            Plan your crew in a clear 2D tactical map. No camera-angle confusion, no hidden corridors, just readable stealth strategy.
+            The game now focuses on explainable path planning, Bayesian suspicion tracking, and smooth turn execution.
+          </p>
 
-        </motion.div>
+          <div style={s.algorithmPills}>
+            <span style={s.pill}>A* Pathfinding</span>
+            <span style={s.pill}>CBS Multi-Agent Planner</span>
+            <span style={s.pill}>Bayesian Suspicion Grid</span>
+            <span style={s.pill}>CSP Objective Order</span>
+          </div>
 
-        <motion.div 
-          style={s.secondaryBtnGroup}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 0.8, delay: 1.6 }}
-        >
-          <motion.button
-            whileHover={{ scale: 1.05, background: 'rgba(0, 255, 102, 0.2)' }}
-            whileTap={{ scale: 0.95 }}
-            style={{
-              ...s.btnBase,
-              padding: '12px 24px',
-              fontSize: '0.9rem',
-              background: 'rgba(10, 10, 15, 0.6)',
-              color: 'var(--neon-green)',
-              border: '1px solid var(--neon-green)',
-            }}
-            onClick={() => startGame('pvai', true)}
-          >
-            <BookOpen size={16} />
-            Interactive Tutorial
-          </motion.button>
-
-          <motion.button
-            whileHover={{ scale: 1.05, background: 'rgba(252, 238, 10, 0.2)' }}
-            whileTap={{ scale: 0.95 }}
-            style={{
-              ...s.btnBase,
-              padding: '12px 24px',
-              fontSize: '0.9rem',
-              background: 'rgba(10, 10, 15, 0.6)',
-              color: 'var(--neon-yellow)',
-              border: '1px solid var(--neon-yellow)',
-            }}
-            onClick={() => setShowHowToPlay(true)}
-          >
-            <HelpCircle size={16} />
-            How to Play
-          </motion.button>
+          <div style={s.btnGroup}>
+            <motion.button
+              whileHover={{ y: -2, boxShadow: '0 8px 24px rgba(56, 189, 248, 0.38)' }}
+              whileTap={{ scale: 0.98 }}
+              style={s.primaryBtn}
+              onClick={() => startGame('pvai')}
+            >
+              <Play size={18} /> Play as Mastermind
+            </motion.button>
+            <motion.button
+              whileHover={{ y: -2, boxShadow: '0 8px 24px rgba(249, 115, 22, 0.34)' }}
+              whileTap={{ scale: 0.98 }}
+              style={s.secondaryBtn}
+              onClick={() => startGame('spectator')}
+            >
+              <Eye size={18} /> Watch AI vs AI
+            </motion.button>
+            <motion.button
+              whileHover={{ y: -1 }}
+              whileTap={{ scale: 0.98 }}
+              style={s.ghostBtn}
+              onClick={() => startGame('pvai', true)}
+            >
+              <BookOpen size={16} /> Interactive Tutorial
+            </motion.button>
+            <motion.button
+              whileHover={{ y: -1 }}
+              whileTap={{ scale: 0.98 }}
+              style={s.ghostBtn}
+              onClick={() => setShowHowToPlay(true)}
+            >
+              <HelpCircle size={16} /> How to Play
+            </motion.button>
+          </div>
         </motion.div>
       </div>
 
-      <motion.div 
-        style={s.footer}
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 0.7 }}
-        transition={{ duration: 1, delay: 2 }}
-      >
-        CS 2005 — Artificial Intelligence Lab Project
-      </motion.div>
+      <div style={s.footer}>CS 2005 - Artificial Intelligence Lab Project</div>
 
-      {/* How to Play overlay */}
       <AnimatePresence>
         {showHowToPlay && (
           <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
+            initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.9 }}
+            exit={{ opacity: 0, scale: 0.95 }}
             style={{ position: 'absolute', inset: 0, zIndex: 100 }}
           >
             <HowToPlay asModal />

@@ -1,6 +1,7 @@
 /* ── HUD — heads-up display overlay with alert + event log ── */
 import { useGameStore } from '../store/gameStore'
 import { motion, AnimatePresence } from 'framer-motion'
+import type { Variants } from 'framer-motion'
 import { Clock, Star, Activity, CheckSquare, AlertTriangle, Terminal, Moon, Sun, Tags } from 'lucide-react'
 
 const ALERT_COLORS = ['#00ff66', '#fcee0a', '#ff003c', '#ff003c']
@@ -162,7 +163,7 @@ function objectiveRole(objectiveId: string): { role: string; color: string } {
 }
 
 function labelObjective(objectiveId: string): string {
-  return objectiveId.replaceAll('_', ' ')
+  return objectiveId.replace(/_/g, ' ')
 }
 
 export default function HUD({ inline = false }: { inline?: boolean } = {}) {
@@ -199,12 +200,12 @@ export default function HUD({ inline = false }: { inline?: boolean } = {}) {
     }
   })
 
-  const badgeVariants = {
+  const badgeVariants: Variants = {
     hidden: { opacity: 0, x: -20 },
     visible: (i: number) => ({
       opacity: 1,
       x: 0,
-      transition: { delay: i * 0.1, duration: 0.5, ease: "easeOut" }
+      transition: { delay: i * 0.1, duration: 0.5, ease: 'easeOut' }
     })
   }
 

@@ -1,10 +1,9 @@
-/* ── RightSidebar — viz toggles + CBS / Bayesian / Minimax algorithm panels (collapsible) ── */
+/* ── RightSidebar — viz toggles + CBS / Bayesian algorithm panels (collapsible) ── */
 import { useState } from 'react'
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import SpeedControls from './SpeedControls'
 import CBSTreePanel from '../visualizations/CBSTreePanel'
 import BayesianPanel from '../visualizations/BayesianPanel'
-import MinimaxPanel from '../visualizations/MinimaxPanel'
 
 const EXPANDED_WIDTH = 360
 const COLLAPSED_WIDTH = 40
@@ -85,7 +84,6 @@ export default function RightSidebar() {
           <SpeedControls inline />
           <CBSTreePanel inline />
           <BayesianPanel inline />
-          <MinimaxPanel inline />
         </div>
       )}
     </aside>

@@ -434,7 +434,7 @@ export default function HowToPlay({ asModal = false }: { asModal?: boolean }) {
         <div style={s.section}>
           <div style={{ ...s.sectionTitle, color: '#e94560' }}>The AI Behind the Game</div>
           <div style={s.paragraph}>
-            This game showcases 5 AI algorithms working together. The visualization panels let you see the algorithms in action.
+            This game showcases 4 core AI systems working together. The visualization panels let you see the algorithms in action.
           </div>
           <div style={s.aiCard}>
             <div style={{ ...s.aiTitle, color: '#00d4ff' }}>🔍 A* Search — Pathfinding</div>
@@ -460,11 +460,10 @@ export default function HowToPlay({ asModal = false }: { asModal?: boolean }) {
             </div>
           </div>
           <div style={s.aiCard}>
-            <div style={{ ...s.aiTitle, color: '#ff6b35' }}>🎯 Minimax — Warden's Strategy</div>
+            <div style={{ ...s.aiTitle, color: '#ff6b35' }}>🛡️ Warden Heuristic — Guard Pressure</div>
             <div style={s.aiDesc}>
-              The Warden uses adversarial search (Minimax with alpha-beta pruning) to decide where to move guards.
-              It simulates possible moves and counter-moves, choosing the option with the highest chance of catching you.
-              The decision tree shows which moves were considered.
+              Instead of a deep game tree, guards now follow a clear rule: move toward high-suspicion tiles from the Bayesian map.
+              This keeps guard behavior understandable and consistent while staying fast and responsive each turn.
             </div>
           </div>
           <div style={s.aiCard}>

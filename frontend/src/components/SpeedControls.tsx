@@ -118,7 +118,6 @@ export default function SpeedControls({ inline = false }: { inline?: boolean } =
   const setAiSpeed = useGameStore((st) => st.setAiSpeed)
   const showCBSTree = useGameStore((st) => st.showCBSTree)
   const showBayesian = useGameStore((st) => st.showBayesian)
-  const showMinimax = useGameStore((st) => st.showMinimax)
   const showAstarViz = useGameStore((st) => st.showAstarViz)
   const toggleViz = useGameStore((st) => st.toggleViz)
   const gameStatus = useGameStore((st) => st.gameStatus)
@@ -194,10 +193,9 @@ export default function SpeedControls({ inline = false }: { inline?: boolean } =
     setExecutionMode('done')
   }
 
-  const vizToggles: { key: 'showCBSTree' | 'showBayesian' | 'showMinimax' | 'showAstarViz'; label: string; desc: string; active: boolean }[] = [
+  const vizToggles: { key: 'showCBSTree' | 'showBayesian' | 'showAstarViz'; label: string; desc: string; active: boolean }[] = [
     { key: 'showCBSTree', label: 'Route Plan (CBS)', desc: 'Shows how AI finds collision-free crew paths', active: showCBSTree },
     { key: 'showBayesian', label: 'Suspicion Map 🗺️', desc: 'Shows guard suspicion as colored tiles on the maze', active: showBayesian },
-    { key: 'showMinimax', label: 'Guard Strategy', desc: 'Shows how guards decide their best moves', active: showMinimax },
     { key: 'showAstarViz', label: 'A* Pathfinder', desc: 'Shows individual pathfinding visualization', active: showAstarViz },
   ]
 

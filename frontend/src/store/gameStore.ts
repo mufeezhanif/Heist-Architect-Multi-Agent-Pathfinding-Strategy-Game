@@ -1,5 +1,5 @@
 /* ── Heist Architect — Zustand global store ── */
-import { create } from 'zustand'
+import { create, type StoreApi, type UseBoundStore } from 'zustand'
 
 // ── Types ──
 export interface Cell {
@@ -54,7 +54,6 @@ export interface TurnResult {
   objectives_completed: string[]
   bayesian_heatmap: Record<string, number>
   warden_action: Record<string, unknown> | null
-  minimax_log: Record<string, unknown>[]
   game_status: string
   score: number
   alert_level: number
@@ -93,7 +92,6 @@ export interface GameState {
 
   // Visualizations
   bayesianHeatmap: Record<string, number>
-  minimaxLog: Record<string, unknown>[]
   sensorEvents: { sensor_id: string; event_type: string; pos: [number, number] }[]
   turnResult: TurnResult | null
 
@@ -104,7 +102,6 @@ export interface GameState {
   // Viz panel toggles
   showCBSTree: boolean
   showBayesian: boolean
-  showMinimax: boolean
   showAstarViz: boolean
 
   // Move mode
@@ -152,13 +149,12 @@ export interface GameState {
   setMaxTurns: (n: number) => void
   setTurnResult: (r: TurnResult) => void
   setBayesianHeatmap: (h: Record<string, number>) => void
-  setMinimaxLog: (l: Record<string, unknown>[]) => void
   setAlertLevel: (l: number) => void
   addEventLog: (msg: string) => void
   setEventLog: (log: string[]) => void
   setAiSpeed: (s: number) => void
   setAiRunning: (r: boolean) => void
-  toggleViz: (name: 'showCBSTree' | 'showBayesian' | 'showMinimax' | 'showAstarViz') => void
+  toggleViz: (name: 'showCBSTree' | 'showBayesian' | 'showAstarViz') => void
   setMoveMode: (m: 'quick' | 'strategic') => void
   setPendingMove: (agentId: string, pos: [number, number]) => void
   clearPendingMoves: () => void
@@ -203,14 +199,12 @@ const initialState = {
   alertLevel: 0,
   eventLog: [] as string[],
   bayesianHeatmap: {} as Record<string, number>,
-  minimaxLog: [] as Record<string, unknown>[],
   sensorEvents: [] as { sensor_id: string; event_type: string; pos: [number, number] }[],
   turnResult: null as TurnResult | null,
   aiSpeed: 1,
   aiRunning: false,
   showCBSTree: true,
   showBayesian: true,
-  showMinimax: false,
   showAstarViz: true,
   moveMode: 'quick' as const,
   pendingMoves: {} as Record<string, [number, number]>,
@@ -229,7 +223,7 @@ const initialState = {
     godMode: false,
 }
 
-export const useGameStore = create<GameState>((set) => ({
+export const useGameStore: UseBoundStore<StoreApi<GameState>> = create<GameState>()((set) => ({
   ...initialState,
 
   setScreen: (s) => set({ screen: s }),
@@ -256,13 +250,11 @@ export const useGameStore = create<GameState>((set) => ({
       score: r.score,
       sensorEvents: r.sensor_events,
       bayesianHeatmap: r.bayesian_heatmap,
-      minimaxLog: r.minimax_log,
       objectivesCompleted: r.objectives_completed,
       alertLevel: r.alert_level,
       eventLog: r.event_log || [],
     }),
   setBayesianHeatmap: (h) => set({ bayesianHeatmap: h }),
-  setMinimaxLog: (l) => set({ minimaxLog: l }),
   setAlertLevel: (l) => set({ alertLevel: l }),
   addEventLog: (msg) => set((s) => ({ eventLog: [...s.eventLog.slice(-19), msg] })),
   setEventLog: (log) => set({ eventLog: log }),

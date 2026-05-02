@@ -44,7 +44,6 @@ const ALGORITHMS = [
   { key: 'cbs', label: 'CBS', desc: 'Conflict Resolution', color: '#00ff88', phase: 'plan' },
   { key: 'csp', label: 'CSP', desc: 'Dependencies', color: '#ffcc00', phase: 'plan' },
   { key: 'bayesian', label: 'Bayesian', desc: 'Warden Belief', color: '#9b59b6', phase: 'execute' },
-  { key: 'minimax', label: 'Minimax', desc: 'Guard Strategy', color: '#e94560', phase: 'execute' },
 ]
 
 interface Props { inline?: boolean }

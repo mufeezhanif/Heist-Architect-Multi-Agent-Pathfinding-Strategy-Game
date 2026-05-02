@@ -20,7 +20,7 @@ const TUTORIAL_STEPS: TutorialStepDef[] = [
   {
     title: 'Meet Your Crew',
     instruction: 'Look at the bottom of the screen. You have 3 agents: Hacker (green), Thief (red), and Muscle (orange).',
-    detail: 'Each agent has a unique ability. The Hacker disables security devices, the Thief picks locks, and the Muscle can knock out a guard. Their colored capsules are visible on the 3D map.',
+    detail: 'Each agent has a unique ability. The Hacker disables security devices, the Thief picks locks, and the Muscle can knock out a guard. Their colored markers are visible on the 2D tactical map.',
     highlight: 'agent-cards',
     canAdvance: true,
   },
@@ -34,7 +34,7 @@ const TUTORIAL_STEPS: TutorialStepDef[] = [
   },
   {
     title: 'Set a Destination',
-    instruction: 'Now click on any glowing (walkable) cell on the 3D map to set the Hacker\'s destination.',
+    instruction: 'Now click on any walkable cell on the 2D map to set the Hacker\'s destination.',
     detail: 'A dotted path preview will appear showing the route. Dark cells are walls — you can only click on lit floor cells. Try clicking near an objective marker!',
     highlight: 'map',
     waitForAction: 'set_waypoint',
@@ -77,7 +77,7 @@ const TUTORIAL_STEPS: TutorialStepDef[] = [
   {
     title: 'Understand the Warden',
     instruction: 'Check the Bayesian heatmap — it shows where the Warden THINKS your crew is.',
-    detail: 'Red cells = high suspicion, blue = low. The Warden updates this after every sensor event. The Minimax panel shows the Warden\'s decision tree for guard movement. Stay away from red zones!',
+    detail: 'Red cells = high suspicion, blue = low. The Warden updates this after every sensor event and pushes guards toward suspicious zones. Stay away from red zones!',
     canAdvance: true,
   },
   {
