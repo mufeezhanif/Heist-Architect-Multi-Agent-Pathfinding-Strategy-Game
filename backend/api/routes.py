@@ -1,23 +1,41 @@
 """
-Heist Architect — FastAPI REST Endpoints
+Heist Architect — REST API endpoints
 """
 import math
+
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
+
 from game.engine import (
-    create_game, get_game, plan_paths, execute_turn,
-    ai_mastermind_plan, GameStatus,
+    GameStatus,
+    ai_mastermind_plan,
+    create_game,
+    execute_turn,
+    get_game,
+    plan_paths,
 )
 
 router = APIRouter()
 
 
 def _safe_float(v: float) -> float:
-    """Replace inf/nan with 0 for JSON serialization."""
-    if math.isinf(v) or math.isnan(v):
-        return 0.0
-    return v
+    """Replace inf/nan with 0.0 for JSON serialization."""
+    return 0.0 if (math.isinf(v) or math.isnan(v)) else v
 
+
+def _plan_response(result) -> dict:
+    """Serialize a CBSResult into a JSON-safe dict."""
+    return {
+        "success": result.success,
+        "paths": result.paths,
+        "total_cost": _safe_float(result.total_cost),
+        "makespan": _safe_float(result.makespan),
+        "conflicts_resolved": result.conflicts_resolved,
+        "tree_log": result.tree_log,
+    }
+
+
+# ── Request models ────────────────────────────────────────────────────────────
 
 class CreateGameRequest(BaseModel):
     mode: str = "pva_mastermind"  # or "ai_vs_ai"
@@ -27,9 +45,7 @@ class PlanRequest(BaseModel):
     waypoints: dict[str, list[int]]  # agent_id → [x, y]
 
 
-class ExecuteRequest(BaseModel):
-    pass
-
+# ── Endpoints ─────────────────────────────────────────────────────────────────
 
 @router.post("/create")
 def create_game_endpoint(req: CreateGameRequest):
@@ -65,21 +81,8 @@ def plan_endpoint(game_id: str, req: PlanRequest):
     if game.status not in (GameStatus.PLANNING, GameStatus.EXECUTING):
         raise HTTPException(400, f"Game is in {game.status.value} phase")
 
-    waypoints = {
-        agent_id: (coords[0], coords[1])
-        for agent_id, coords in req.waypoints.items()
-    }
-
-    result = plan_paths(game, waypoints)
-
-    return {
-        "success": result.success,
-        "paths": result.paths,
-        "total_cost": _safe_float(result.total_cost),
-        "makespan": _safe_float(result.makespan),
-        "conflicts_resolved": result.conflicts_resolved,
-        "tree_log": result.tree_log,
-    }
+    waypoints = {agent_id: (coords[0], coords[1]) for agent_id, coords in req.waypoints.items()}
+    return _plan_response(plan_paths(game, waypoints))
 
 
 @router.post("/{game_id}/execute")
@@ -91,7 +94,6 @@ def execute_endpoint(game_id: str):
         raise HTTPException(400, f"Game is {game.status.value}")
 
     result = execute_turn(game)
-
     return {
         "turn": result.turn,
         "crew_positions": result.crew_positions,
@@ -110,17 +112,8 @@ def execute_endpoint(game_id: str):
 
 @router.post("/{game_id}/ai-plan")
 def ai_plan_endpoint(game_id: str):
-    """AI Mastermind automatically plans paths (for AI vs AI mode)."""
+    """AI Mastermind automatically plans paths (used in AI vs AI mode)."""
     game = get_game(game_id)
     if not game:
         raise HTTPException(404, "Game not found")
-
-    result = ai_mastermind_plan(game)
-    return {
-        "success": result.success,
-        "paths": result.paths,
-        "total_cost": _safe_float(result.total_cost),
-        "makespan": _safe_float(result.makespan),
-        "conflicts_resolved": result.conflicts_resolved,
-        "tree_log": result.tree_log,
-    }
+    return _plan_response(ai_mastermind_plan(game))

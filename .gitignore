@@ -12,6 +12,10 @@ build/
 .DS_Store
 *.egg-info/
 .claude/
+
+# Dev logs
+*_dev.log
+
 # Playwright MCP artifacts
 .playwright-mcp/
 .*
