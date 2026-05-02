@@ -8,6 +8,10 @@
     },
     "rewrites": [
         {
+            "source": "/api/echo",
+            "destination": "/echo.py"
+        },
+        {
             "source": "/api/(.*)",
             "destination": "/api.py/$1"
         },
