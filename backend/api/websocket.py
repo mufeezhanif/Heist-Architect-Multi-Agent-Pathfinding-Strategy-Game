@@ -181,14 +181,13 @@ async def game_websocket(websocket: WebSocket, game_id: str):
                     "objectives_completed": result.objectives_completed,
                     "bayesian_heatmap": result.bayesian_heatmap,
                     "warden_action": result.warden_action,
-                    "minimax_log": result.minimax_log,
                     "game_status": result.game_status,
                     "score": result.score,
                     "alert_level": result.alert_level,
                     "event_log": result.event_log,
                     "algorithms_used": {
                         "bayesian": "Warden updated belief grid based on sensor data",
-                        "minimax": f"Warden evaluated {result.warden_action.get('nodes', 0) if result.warden_action else 0} positions to decide guard movement",
+                        "warden": (result.warden_action or {}).get("reason", "Warden held current posture"),
                     },
                 }
                 turn_data["narration"] = _build_turn_narration(result)
@@ -265,14 +264,13 @@ async def game_websocket(websocket: WebSocket, game_id: str):
                         "objectives_completed": turn_result.objectives_completed,
                         "bayesian_heatmap": turn_result.bayesian_heatmap,
                         "warden_action": turn_result.warden_action,
-                        "minimax_log": turn_result.minimax_log,
                         "game_status": turn_result.game_status,
                         "score": turn_result.score,
                         "alert_level": turn_result.alert_level,
                         "event_log": turn_result.event_log,
                         "algorithms_used": {
                             "bayesian": "Warden updated belief grid",
-                            "minimax": f"Warden evaluated {turn_result.warden_action.get('nodes', 0) if turn_result.warden_action else 0} positions",
+                            "warden": (turn_result.warden_action or {}).get("reason", "Warden held current posture"),
                         },
                     }
                     turn_data["narration"] = _build_turn_narration(turn_result)

@@ -30,9 +30,6 @@ from algorithms.bayesian import (
     BeliefGrid, Observation, ObservationType,
     bayesian_update, predict_movement, belief_to_dict,
 )
-from algorithms.minimax import (
-    WardenState, WardenAction, ActionType, minimax_search,
-)
 
 
 class GameStatus(Enum):
@@ -79,7 +76,6 @@ class TurnResult:
     objectives_completed: list[str]
     bayesian_heatmap: dict
     warden_action: dict | None
-    minimax_log: list[dict]
     game_status: str
     score: int
     alert_level: int
@@ -336,7 +332,7 @@ def execute_turn(game: GameState) -> TurnResult:
     
     Each step is animated on the frontend. Guards, sensors, and detections
     are checked at every step for realism. After all steps complete,
-    Bayesian + Minimax AI runs, then returns to PLANNING.
+    Bayesian update + heuristic Warden response, then returns to PLANNING.
     """
     game.turn += 1
 
@@ -373,16 +369,8 @@ def execute_turn(game: GameState) -> TurnResult:
 
     # Warden AI
     warden_action_dict = None
-    minimax_log: list[dict] = []
     if game.mode in (GameMode.PVA_MASTERMIND, GameMode.AI_VS_AI):
-        warden_result = _run_warden_ai(game)
-        if warden_result:
-            warden_action_dict = {
-                "action": warden_result.best_action.description if warden_result.best_action else "none",
-                "score": warden_result.score,
-                "nodes": warden_result.nodes_evaluated,
-            }
-            minimax_log = warden_result.tree_log
+        warden_action_dict = _run_warden_ai(game)
 
     # Check objectives
     newly_completed = _check_objectives(game)
@@ -411,7 +399,6 @@ def execute_turn(game: GameState) -> TurnResult:
             objectives_completed=list(game.objectives_completed),
         bayesian_heatmap=belief_to_dict(game.belief),
         warden_action=warden_action_dict,
-        minimax_log=minimax_log,
         game_status=game.status.value,
         score=game.score,
         alert_level=game.alert_level.value,
@@ -829,36 +816,80 @@ def _check_endgame(game: GameState):
             game.event_log.append("HEIST COMPLETE — All objectives secured!")
 
 
-def _run_warden_ai(game: GameState) -> Optional:
-    belief_list = game.belief.grid.tolist()
+def _run_warden_ai(game: GameState) -> Optional[dict]:
+    """Simple, explainable Warden policy driven by Bayesian suspicion peaks."""
+    if not game.guards:
+        return None
 
-    guard_vision = {}
-    for g in game.guards:
-        guard_vision[g.guard_id] = g.get_vision_cells(game.building)
+    best_prob = -1.0
+    target_cell: tuple[int, int] | None = None
+    for y in range(game.belief.height):
+        for x in range(game.belief.width):
+            if not game.building.is_walkable(x, y):
+                continue
+            prob = float(game.belief.grid[y, x])
+            if prob > best_prob:
+                best_prob = prob
+                target_cell = (x, y)
 
-    warden_state = WardenState(
-        guard_positions={g.guard_id: (g.x, g.y) for g in game.guards},
-        camera_directions={c.camera_id: c.direction for c in game.building.cameras},
-        belief_grid=belief_list,
-        alert_level=game.alert_level.value,
-        sensors_remaining=3,
-        turn=game.turn,
-        guard_vision=guard_vision,
-    )
+    if target_cell is None:
+        return None
 
-    result = minimax_search(warden_state, game.building, max_depth=2)
+    tx, ty = target_cell
+    active_guards = [g for g in game.guards if not g.knocked_out]
 
-    if result.best_action:
-        action = result.best_action
-        if action.action_type == ActionType.MOVE_GUARD:
-            for g in game.guards:
-                if g.guard_id == action.target_id:
-                    g.x, g.y = action.target_pos
-                    break
-        elif action.action_type == ActionType.ROTATE_CAMERA:
-            for c in game.building.cameras:
-                if c.camera_id == action.target_id:
-                    c.direction = action.direction
-                    break
+    if active_guards:
+        primary = min(active_guards, key=lambda g: abs(g.x - tx) + abs(g.y - ty))
+        current_dist = abs(primary.x - tx) + abs(primary.y - ty)
 
-    return result
+        best_step = (primary.x, primary.y)
+        best_step_dist = current_dist
+        for nx, ny in game.building.neighbors(primary.x, primary.y):
+            dist = abs(nx - tx) + abs(ny - ty)
+            if dist < best_step_dist:
+                best_step = (nx, ny)
+                best_step_dist = dist
+
+        if best_step != (primary.x, primary.y):
+            from_pos = (primary.x, primary.y)
+            primary.x, primary.y = best_step
+            return {
+                "type": "move_guard",
+                "guard_id": primary.guard_id,
+                "from": [from_pos[0], from_pos[1]],
+                "to": [best_step[0], best_step[1]],
+                "target": [tx, ty],
+                "target_prob": round(best_prob, 3),
+                "reason": "Moved nearest guard toward highest-suspicion tile",
+            }
+
+    # If no guard can improve position, rotate a camera to face the hotspot.
+    active_cameras = [c for c in game.building.cameras if c.active]
+    if active_cameras:
+        cam = min(active_cameras, key=lambda c: abs(c.x - tx) + abs(c.y - ty))
+        dx = tx - cam.x
+        dy = ty - cam.y
+        if abs(dx) >= abs(dy):
+            desired_dir = 1 if dx > 0 else 3
+        else:
+            desired_dir = 2 if dy > 0 else 0
+
+        if cam.direction != desired_dir:
+            old_dir = cam.direction
+            cam.direction = desired_dir
+            return {
+                "type": "rotate_camera",
+                "camera_id": cam.camera_id,
+                "from": old_dir,
+                "to": desired_dir,
+                "target": [tx, ty],
+                "target_prob": round(best_prob, 3),
+                "reason": "Rotated nearest camera toward highest-suspicion tile",
+            }
+
+    return {
+        "type": "hold",
+        "target": [tx, ty],
+        "target_prob": round(best_prob, 3),
+        "reason": "No improving guard move available",
+    }

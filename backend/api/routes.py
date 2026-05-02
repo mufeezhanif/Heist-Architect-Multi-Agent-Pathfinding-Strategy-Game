@@ -101,7 +101,6 @@ def execute_endpoint(game_id: str):
         "objectives_completed": result.objectives_completed,
         "bayesian_heatmap": result.bayesian_heatmap,
         "warden_action": result.warden_action,
-        "minimax_log": result.minimax_log,
         "game_status": result.game_status,
         "score": result.score,
         "alert_level": result.alert_level,

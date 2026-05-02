@@ -11,7 +11,7 @@ build/
 .idea/
 .DS_Store
 *.egg-info/
-
+.claude/
 # Playwright MCP artifacts
 .playwright-mcp/
-
+.*
