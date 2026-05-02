@@ -103,15 +103,9 @@ async def _stream_steps(websocket: WebSocket, result: TurnResult, step_delay: fl
             "alert_level": step.alert_level,
             "alert_message": step.alert_message,
             "game_status": step.game_status,
-            "narration": _build_step_narration(
-                {**step_data, "crew_positions": step.crew_positions,
-                 "sensor_events": step.sensor_events,
-                 "detections": step.detections,
-                 "alert_message": step.alert_message},
-                prev_pos,
-            ),
         }
-        prev_pos = step.crew_positions
+        step_data["narration"] = _build_step_narration(step_data, prev_pos)
+        prev_pos = dict(step.crew_positions)
         await websocket.send_json(step_data)
         await asyncio.sleep(step_delay)
 
