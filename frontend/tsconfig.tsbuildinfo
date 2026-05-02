@@ -1,1 +1,29 @@
-{"root":["./src/App.tsx","./src/main.tsx","./src/vite-env.d.ts","./src/api/client.ts","./src/api/normalize.ts","./src/components/AlgorithmStatus.tsx","./src/components/Controls.tsx","./src/components/DraggablePanel.tsx","./src/components/GameBoard2D.tsx","./src/components/GameOverScreen.tsx","./src/components/HUD.tsx","./src/components/HelpButton.tsx","./src/components/HowToPlay.tsx","./src/components/InlinePanel.tsx","./src/components/LandingPage.tsx","./src/components/LeftSidebar.tsx","./src/components/NarrationPanel.tsx","./src/components/RightSidebar.tsx","./src/components/SensorLog.tsx","./src/components/SpeedControls.tsx","./src/components/TutorialOverlay.tsx","./src/store/gameStore.ts","./src/visualizations/BayesianPanel.tsx","./src/visualizations/CBSTreePanel.tsx"],"version":"5.6.3"}
+{
+  "root": [
+    "./src/App.tsx",
+    "./src/main.tsx",
+    "./src/vite-env.d.ts",
+    "./src/api/client.ts",
+    "./src/api/normalize.ts",
+    "./src/components/AlgorithmStatus.tsx",
+    "./src/components/Controls.tsx",
+    "./src/components/DraggablePanel.tsx",
+    "./src/components/GameBoard2D.tsx",
+    "./src/components/GameOverScreen.tsx",
+    "./src/components/HUD.tsx",
+    "./src/components/HelpButton.tsx",
+    "./src/components/HowToPlay.tsx",
+    "./src/components/InlinePanel.tsx",
+    "./src/components/LandingPage.tsx",
+    "./src/components/LeftSidebar.tsx",
+    "./src/components/NarrationPanel.tsx",
+    "./src/components/RightSidebar.tsx",
+    "./src/components/SensorLog.tsx",
+    "./src/components/SpeedControls.tsx",
+    "./src/components/TutorialOverlay.tsx",
+    "./src/store/gameStore.ts",
+    "./src/visualizations/BayesianPanel.tsx",
+    "./src/visualizations/CBSTreePanel.tsx"
+  ],
+  "version": "5.6.3"
+}
