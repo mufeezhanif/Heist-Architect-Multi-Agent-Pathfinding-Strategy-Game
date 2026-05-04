@@ -1,9 +1,3 @@
-"""
-Heist Architect — Building Grid Model
-
-The building is a 2D grid where each cell has a type and optional properties.
-Used by A*/CBS for pathfinding and by the game engine for state tracking.
-"""
 from __future__ import annotations
 from dataclasses import dataclass, field
 from enum import Enum
@@ -49,7 +43,7 @@ class Camera:
     camera_id: str
     x: int
     y: int
-    direction: int  # 0=N,1=E,2=S,3=W
+    direction: int
     cone_length: int = 3
     active: bool = True
 
@@ -159,42 +153,33 @@ class Building:
 
 
 def create_medium_building() -> Building:
-    """
-    Create a 30x25 building with multiple wings, corridors, vents, and
-    alternate routes to make gameplay richer and more unpredictable.
-
-    Layout key:
-      # = wall, . = floor, - = corridor, D = door
-      E = entry, X = extraction
-      S = hack_server, L = steal_loot, A = disable_alarm
-      C = disable_camera, V = vent (floor shortcut)
-    """
+    """Create a 30x25 building for the heist scenario."""
     layout = [
-        "##############################",  # 0
-        "#E...#------#.....#....#....X#",  # 1
-        "#....#------#.....#....#.....#",  # 2
-        "#....D------D.....D....D.....#",  # 3
-        "#....#------#.....#....#.....#",  # 4
-        "######------###D########.....#",  # 5
-        "#....D------D.........#......#",  # 6
-        "#....#------#.........D......#",  # 7
-        "#..A.#------#.........#......#",  # 8
-        "#....#------#.........########",  # 9
-        "######------###D####D##.....##",  # 10
-        "#....D------D......#..#......#",  # 11
-        "#....#------#......D..D......#",  # 12
-        "#....#------#..S...#..#..C...#",  # 13
-        "#....#------#......#..#......#",  # 14
-        "######------###D####..####D###",  # 15
-        "#....D------D......#.........#",  # 16
-        "#....#------#......#.........#",  # 17
-        "#....#------#..L...D........X#",  # 18
-        "#....#------#......#.........#",  # 19
-        "######------###D####.........#",  # 20
-        "#....D------D.....#..........#",  # 21
-        "#....#------#.....#..........#",  # 22
-        "#.E..#------#.....D.........X#",  # 23
-        "##############################",  # 24
+        "##############################",
+        "#E...#------#.....#....#....X#",
+        "#....#------#.....#....#.....#",
+        "#....D------D.....D....D.....#",
+        "#....#------#.....#....#.....#",
+        "######------###D########.....#",
+        "#....D------D.........#......#",
+        "#....#------#.........D......#",
+        "#..A.#------#.........#......#",
+        "#....#------#.........########",
+        "######------###D####D##.....##",
+        "#....D------D......#..#......#",
+        "#....#------#......D..D......#",
+        "#....#------#..S...#..#..C...#",
+        "#....#------#......#..#......#",
+        "######------###D####..####D###",
+        "#....D------D......#.........#",
+        "#....#------#......#.........#",
+        "#....#------#..L...D........X#",
+        "#....#------#......#.........#",
+        "######------###D####.........#",
+        "#....D------D.....#..........#",
+        "#....#------#.....#..........#",
+        "#.E..#------#.....D.........X#",
+        "##############################",
     ]
 
     char_map = {
@@ -226,10 +211,10 @@ def create_medium_building() -> Building:
         grid.append(grid_row)
 
     cameras = [
-        Camera("cam_1", 12, 6, direction=1),   # East-facing in upper wing
-        Camera("cam_2", 12, 12, direction=2),   # South-facing mid area
-        Camera("cam_3", 18, 11, direction=3),   # West-facing right wing
-        Camera("cam_4", 22, 18, direction=0),   # North-facing near loot
+        Camera("cam_1", 12, 6, direction=1),
+        Camera("cam_2", 12, 12, direction=2),
+        Camera("cam_3", 18, 11, direction=3),
+        Camera("cam_4", 22, 18, direction=0),
     ]
 
     return Building(width=width, height=height, grid=grid,

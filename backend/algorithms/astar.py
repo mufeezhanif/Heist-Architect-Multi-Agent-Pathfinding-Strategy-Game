@@ -1,18 +1,3 @@
-"""
-MODULE: astar.py
-ALGORITHM: A* Search (Space-Time variant)
-COURSE TOPIC: Informed Search
-COMPLEXITY: O(b^d) time, O(b^d) space
-PURPOSE IN GAME: Low-level solver inside CBS — finds optimal path
-                 for a SINGLE agent on the building grid, respecting
-                 space-time constraints injected by CBS.
-
-SECTIONS:
-    1. Data Structures  — SpaceTimeNode, SearchResult
-    2. Heuristic        — Manhattan distance (admissible & consistent)
-    3. Core Algorithm   — A* with open/closed sets in space-time
-    4. Constraint Layer  — Vertex & edge constraints from CBS
-"""
 from __future__ import annotations
 import heapq
 from dataclasses import dataclass, field
@@ -22,16 +7,8 @@ if TYPE_CHECKING:
     from game.building import Building
 
 
-# ────────────────────────────────────────────────────────────────
-# SECTION 1: Data Structures
-# ────────────────────────────────────────────────────────────────
-
 @dataclass
 class SpaceTimeNode:
-    """
-    State = (x, y, t) — same cell at different times is a different node.
-    This lets CBS say "agent must NOT be at (3,4) at time 5".
-    """
     x: int
     y: int
     t: int
@@ -56,7 +33,6 @@ class SpaceTimeNode:
 
 @dataclass
 class SearchResult:
-    """Result of an A* search."""
     path: list[tuple[int, int]]
     cost: float
     nodes_expanded: int
@@ -64,22 +40,10 @@ class SearchResult:
     timesteps: list[int] = field(default_factory=list)
 
 
-# ────────────────────────────────────────────────────────────────
-# SECTION 2: Heuristic
-# ────────────────────────────────────────────────────────────────
-
 def manhattan_distance(x1: int, y1: int, x2: int, y2: int) -> float:
-    """
-    Manhattan distance — admissible on 4-connected grids.
-    Never overestimates: you need at least |dx|+|dy| moves.
-    Consistent: h(n) <= cost(n,n') + h(n') for any neighbor n'.
-    """
+    """Manhattan distance — admissible on 4-connected grids."""
     return abs(x1 - x2) + abs(y1 - y2)
 
-
-# ────────────────────────────────────────────────────────────────
-# SECTION 3: Core Algorithm — Space-Time A*
-# ────────────────────────────────────────────────────────────────
 
 def astar_search(
     building: Building,
@@ -91,18 +55,7 @@ def astar_search(
     move_cost: float = 1.0,
     wait_cost: float = 1.0,
 ) -> SearchResult:
-    """
-    Space-Time A*.
-
-    Steps (viva):
-      1. Put start in open set (priority queue by f-value)
-      2. Pop lowest f = g + h node
-      3. If it's the goal → reconstruct path
-      4. Expand: 4 neighbors + WAIT action
-      5. Skip any neighbor violating a CBS constraint
-      6. Add to open if not already closed
-      7. Repeat until goal found or open empty
-    """
+    """Space-Time A*."""
     constraint_set = set(constraints or [])
     edge_set = set(edge_constraints or [])
 
@@ -134,7 +87,7 @@ def astar_search(
 
         nt = current.t + 1
 
-        # Move to 4-connected neighbors
+
         for nx, ny in building.neighbors(current.x, current.y):
             if (nx, ny, nt) in constraint_set:
                 continue
@@ -149,7 +102,7 @@ def astar_search(
             if node.state() not in closed:
                 heapq.heappush(open_list, node)
 
-        # Wait in place
+
         if (current.x, current.y, nt) not in constraint_set:
             wait = SpaceTimeNode(
                 x=current.x, y=current.y, t=nt,
@@ -163,10 +116,6 @@ def astar_search(
     return SearchResult(path=[], cost=float("inf"),
                         nodes_expanded=expanded, success=False)
 
-
-# ────────────────────────────────────────────────────────────────
-# SECTION 4: Constraint Support — path reconstruction
-# ────────────────────────────────────────────────────────────────
 
 def _reconstruct(node: SpaceTimeNode, expanded: int) -> SearchResult:
     """Walk parent pointers back to start to build the path."""

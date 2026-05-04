@@ -1,7 +1,3 @@
-"""
-Heist Architect — Backend Entry Point
-FastAPI application serving game logic and AI algorithms.
-"""
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from api.routes import router

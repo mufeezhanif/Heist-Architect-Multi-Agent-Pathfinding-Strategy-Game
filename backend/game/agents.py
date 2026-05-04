@@ -1,10 +1,3 @@
-"""
-Heist Architect — Agents Module
-
-Crew members (Mastermind's team) and Guards (Warden's team).
-Guards have varied patrol types and alert-level behaviour.
-Crew members have usable abilities with cooldowns.
-"""
 from __future__ import annotations
 import random
 from dataclasses import dataclass, field
@@ -22,16 +15,16 @@ class CrewRole(Enum):
 
 
 class AbilityType(Enum):
-    DISABLE_DEVICE = "disable_device"   # Hacker: disables camera/alarm
-    PICK_LOCK = "pick_lock"             # Thief: opens locked doors
-    KNOCK_OUT = "knock_out"             # Muscle: neutralizes a guard
-    SPRINT = "sprint"                   # Thief: move extra step this turn
+    DISABLE_DEVICE = "disable_device"
+    PICK_LOCK = "pick_lock"
+    KNOCK_OUT = "knock_out"
+    SPRINT = "sprint"
 
 
 class PatrolType(Enum):
-    LINEAR = "linear"       # A→B→A→B ping-pong
-    LOOP = "loop"           # A→B→C→A→B→C cyclic
-    RANDOM = "random"       # Picks random adjacent walkable cell each turn
+    LINEAR = "linear"
+    LOOP = "loop"
+    RANDOM = "random"
 
 
 @dataclass
@@ -40,7 +33,7 @@ class CrewMember:
     role: CrewRole
     x: int
     y: int
-    movement_speed: int = 2       # tiles per turn
+    movement_speed: int = 2
     health: int = 3
     abilities: list[AbilityType] = field(default_factory=list)
     ability_uses: dict[str, int] = field(default_factory=dict)
@@ -72,7 +65,7 @@ class CrewMember:
     def use_ability(self, ability: AbilityType):
         if self.can_use_ability(ability):
             self.ability_uses[ability.value] -= 1
-            self.ability_cooldowns[ability.value] = 2  # 2 turn cooldown
+            self.ability_cooldowns[ability.value] = 2
 
     def tick_cooldowns(self):
         for k in self.ability_cooldowns:
@@ -103,10 +96,10 @@ class Guard:
     patrol_route: list[tuple[int, int]] = field(default_factory=list)
     patrol_index: int = 0
     patrol_type: PatrolType = PatrolType.LINEAR
-    patrol_direction: int = 1   # +1 forward, -1 backward (for LINEAR)
+    patrol_direction: int = 1
     knocked_out: bool = False
     knocked_out_turns: int = 0
-    alert_bonus_range: int = 0  # Extra vision from alert level
+    alert_bonus_range: int = 0
 
     def advance_patrol(self, building: 'Building | None' = None, alert_level: int = 0):
         """Move guard one step along patrol route, behaviour varies by type."""
@@ -134,7 +127,7 @@ class Guard:
             if building:
                 neighbors = building.neighbors(self.x, self.y)
                 if neighbors:
-                    # Prefer patrol cells but sometimes deviate
+
                     patrol_set = set(self.patrol_route)
                     on_route = [n for n in neighbors if n in patrol_set]
                     if on_route and random.random() < 0.6:
@@ -174,23 +167,18 @@ class Guard:
 def create_default_crew(
     entry_cells: list[tuple[int, int]],
 ) -> list[CrewMember]:
-    """Create the default 3-agent crew at entry positions.
-    
-    Each agent must start at a unique cell for CBS to work.
-    If there are fewer entry cells than agents, offset extras
-    to adjacent floor cells.
-    """
+    """Create the default 3-agent crew at entry positions."""
     roles = [
         (CrewRole.HACKER, 2, "hacker"),
         (CrewRole.THIEF, 3, "thief"),
         (CrewRole.MUSCLE, 2, "muscle"),
     ]
-    # Build unique start positions
+
     used: set[tuple[int, int]] = set()
     positions: list[tuple[int, int]] = []
     for i in range(len(roles)):
         pos = entry_cells[i % len(entry_cells)]
-        # If position already taken, offset to neighboring cell
+
         if pos in used:
             for dx, dy in [(1, 0), (0, 1), (-1, 0), (0, -1), (2, 0), (0, 2)]:
                 alt = (pos[0] + dx, pos[1] + dy)
@@ -212,13 +200,9 @@ def create_default_crew(
 
 
 def create_default_guards(building: 'Building') -> list[Guard]:
-    """Create 4 guards with varied patrol patterns for the 30x25 map.
-    
-    Patrols are placed AWAY from entry points (1,1) and (3,23)
-    so the player has breathing room at the start.
-    """
+    """Create 4 guards with varied patrol patterns for the 30x25 map."""
     guards = [
-        # Guard 1: Linear patrol in mid-right wing (far from entries)
+
         Guard(
             guard_id="guard_1",
             x=18, y=7,
@@ -227,7 +211,7 @@ def create_default_guards(building: 'Building') -> list[Guard]:
             patrol_route=[(18, 6), (18, 7), (18, 8), (18, 9),
                           (17, 10), (16, 11)],
         ),
-        # Guard 2: Loop patrol through central rooms
+
         Guard(
             guard_id="guard_2",
             x=13, y=13,
@@ -237,7 +221,7 @@ def create_default_guards(building: 'Building') -> list[Guard]:
                           (14, 14), (15, 14), (15, 13), (15, 12),
                           (15, 11), (14, 11)],
         ),
-        # Guard 3: Random patrol near vault area (lower-center)
+
         Guard(
             guard_id="guard_3",
             x=15, y=18,
@@ -246,7 +230,7 @@ def create_default_guards(building: 'Building') -> list[Guard]:
             patrol_route=[(14, 17), (14, 18), (15, 18), (15, 19),
                           (16, 18), (16, 17)],
         ),
-        # Guard 4: Linear patrol in right wing corridor
+
         Guard(
             guard_id="guard_4",
             x=22, y=16,

@@ -1,10 +1,3 @@
-"""
-Heist Architect — Sensor System
-
-Sensors detect agent activity and generate observations for
-the Bayesian tracker. The Warden uses sensor events to update
-beliefs about thief positions.
-"""
 from __future__ import annotations
 from dataclasses import dataclass, field
 from enum import Enum
@@ -26,21 +19,19 @@ class SensorEventType(Enum):
 
 @dataclass
 class SensorEvent:
-    """A single sensor event from one turn."""
     sensor_id: str
     event_type: SensorEventType
     sensor_x: int
     sensor_y: int
     timestep: int
-    triggered_by: str | None = None  # agent_id if known (camera only)
+    triggered_by: str | None = None
     exact_pos: tuple[int, int] | None = None
 
 
 @dataclass
 class Sensor:
-    """Base sensor placed on the map."""
     sensor_id: str
-    sensor_type: str  # "door", "motion", "camera", "sound"
+    sensor_type: str
     x: int
     y: int
     radius: int = 2
@@ -49,7 +40,6 @@ class Sensor:
 
 @dataclass
 class SensorSystem:
-    """Manages all sensors and checks for triggers each turn."""
     sensors: list[Sensor] = field(default_factory=list)
 
     def check_all(
@@ -59,10 +49,7 @@ class SensorSystem:
         building: Building,
         special_actions: list[dict] | None = None,
     ) -> list[SensorEvent]:
-        """
-        Check all sensors against agent positions.
-        Returns list of events (both triggers and silences).
-        """
+        """Check all sensors against agent positions."""
         events = []
 
         for sensor in self.sensors:
@@ -72,7 +59,7 @@ class SensorSystem:
             triggered = False
 
             if sensor.sensor_type == "door":
-                # Triggers when any agent is AT the door cell
+
                 for aid, (ax, ay) in agent_positions.items():
                     if ax == sensor.x and ay == sensor.y:
                         events.append(SensorEvent(
@@ -93,7 +80,7 @@ class SensorSystem:
                     ))
 
             elif sensor.sensor_type == "motion":
-                # Triggers when any agent is within radius
+
                 for aid, (ax, ay) in agent_positions.items():
                     dist = abs(ax - sensor.x) + abs(ay - sensor.y)
                     if dist <= sensor.radius:
@@ -114,7 +101,7 @@ class SensorSystem:
                     ))
 
             elif sensor.sensor_type == "camera":
-                # Triggers when agent is in camera cone
+
                 cam_cells = _camera_cone(sensor, building)
                 for aid, (ax, ay) in agent_positions.items():
                     if (ax, ay) in cam_cells:
@@ -137,7 +124,7 @@ class SensorSystem:
                     ))
 
             elif sensor.sensor_type == "sound":
-                # Triggers on special actions within radius
+
                 if special_actions:
                     for action in special_actions:
                         ax, ay = action.get("x", 0), action.get("y", 0)
@@ -158,7 +145,7 @@ class SensorSystem:
 def _camera_cone(sensor: Sensor, building: Building) -> set[tuple[int, int]]:
     """Compute cells in a camera's vision cone (simplified)."""
     cells = set()
-    # Assume direction is stored as metadata; default facing south
+
     direction = getattr(sensor, "direction", 2)
     dir_vectors = [(0, -1), (1, 0), (0, 1), (-1, 0)]
     dx, dy = dir_vectors[direction % 4]
@@ -179,7 +166,7 @@ def create_default_sensors(building: Building) -> SensorSystem:
     sensors = []
     sid = 0
 
-    # Door sensors on every door cell
+
     from game.building import CellType, SensorType as BSensorType
     for y in range(building.height):
         for x in range(building.width):
@@ -192,7 +179,7 @@ def create_default_sensors(building: Building) -> SensorSystem:
                     x=x, y=y, radius=1,
                 ))
 
-    # Motion sensors at key locations (near objectives on 30x25 map)
+
     motion_spots = [(12, 13), (23, 13), (5, 8), (15, 18)]
     for mx, my in motion_spots:
         sid += 1
@@ -202,7 +189,7 @@ def create_default_sensors(building: Building) -> SensorSystem:
             x=mx, y=my, radius=2,
         ))
 
-    # Camera sensors from building cameras
+
     for cam in building.cameras:
         sid += 1
         s = Sensor(
@@ -210,7 +197,7 @@ def create_default_sensors(building: Building) -> SensorSystem:
             sensor_type="camera",
             x=cam.x, y=cam.y, radius=cam.cone_length,
         )
-        s.direction = cam.direction  # type: ignore
+        s.direction = cam.direction
         sensors.append(s)
 
     return SensorSystem(sensors=sensors)

@@ -1,9 +1,3 @@
-"""
-Heist Architect — Game Engine
-
-Step-by-step game loop with alert system, abilities, fog of war,
-and integration of all AI algorithms.
-"""
 from __future__ import annotations
 from dataclasses import dataclass, field
 from enum import Enum
@@ -11,9 +5,7 @@ from typing import Optional
 import uuid
 import os
 
-# ── Admin / Debug toggle ──────────────────────────────────────────────────────
-# Set HEIST_GOD_MODE=1 (or true/yes) in the environment to disable all guard
-# and camera detections so the heist crew can never be busted.
+
 GOD_MODE: bool = os.environ.get("HEIST_GOD_MODE", "").lower() in ("1", "true", "yes")
 
 from game.building import Building, CellType, ObjectiveType, create_medium_building
@@ -40,10 +32,10 @@ class GameStatus(Enum):
 
 
 class AlertLevel(Enum):
-    GREEN = 0    # Normal patrol
-    YELLOW = 1   # Suspicious — guards widen vision
-    RED = 2      # High alert — guards converge
-    LOCKDOWN = 3 # Full lockdown — next detection = game over
+    GREEN = 0
+    YELLOW = 1
+    RED = 2
+    LOCKDOWN = 3
 
 
 class GameMode(Enum):
@@ -53,7 +45,6 @@ class GameMode(Enum):
 
 @dataclass
 class StepResult:
-    """Result of executing a single step within a turn."""
     step: int
     crew_positions: dict[str, tuple[int, int]]
     guard_positions: dict[str, tuple[int, int]]
@@ -66,7 +57,6 @@ class StepResult:
 
 @dataclass
 class TurnResult:
-    """Result of executing a full turn (multiple steps)."""
     turn: int
     steps: list[StepResult]
     crew_positions: dict[str, tuple[int, int]]
@@ -84,7 +74,6 @@ class TurnResult:
 
 @dataclass
 class GameState:
-    """Complete game state."""
     game_id: str
     building: Building
     crew: list[CrewMember]
@@ -98,10 +87,10 @@ class GameState:
     status: GameStatus = GameStatus.PLANNING
     mode: GameMode = GameMode.PVA_MASTERMIND
 
-    # Alert system
+
     alert_level: AlertLevel = AlertLevel.GREEN
     alert_decay_timer: int = 0
-    suspicion: int = 0           # Cumulative suspicion points
+    suspicion: int = 0
     last_known_pos: tuple[int, int] | None = None
 
     objectives_completed: list[str] = field(default_factory=list)
@@ -109,12 +98,12 @@ class GameState:
     detection_count: int = 0
     detection_history: list[dict] = field(default_factory=list)
 
-    # CBS result from last plan
+
     last_cbs_result: Optional[CBSResult] = None
     current_paths: dict[str, list[tuple[int, int]]] = field(default_factory=dict)
     path_step: int = 0
 
-    # Event log
+
     event_log: list[str] = field(default_factory=list)
 
     def to_dict(self, perspective: str = "mastermind") -> dict:
@@ -171,10 +160,6 @@ class GameState:
                     count += 1
         return count
 
-
-# ────────────────────────────────────────────────────────────────
-# Game Factory
-# ────────────────────────────────────────────────────────────────
 
 _games: dict[str, GameState] = {}
 
@@ -233,25 +218,21 @@ def _apply_mastermind_easy_preset(game: GameState):
     """Reduce baseline pressure for human players in mastermind mode."""
     game.max_turns = 65
 
-    # Lower guard pressure while preserving patrol behavior.
+
     game.guards = game.guards[:3]
     for guard in game.guards:
         guard.vision_range = 1
         guard.alert_bonus_range = 0
 
-    # Soften camera coverage slightly.
+
     for cam in game.building.cameras:
         cam.cone_length = max(2, cam.cone_length - 1)
 
-    # Reduce early sensor punishments: keep motion/camera, remove door spam.
+
     game.sensors.sensors = [s for s in game.sensors.sensors if s.sensor_type != "door"]
 
     game.event_log.append("Mastermind mode tuned to normal difficulty (easier guard pressure).")
 
-
-# ────────────────────────────────────────────────────────────────
-# Planning Phase
-# ────────────────────────────────────────────────────────────────
 
 def plan_paths(
     game: GameState,
@@ -274,22 +255,18 @@ def plan_paths(
         game.status = GameStatus.EXECUTING
         game.event_log.append(f"CBS planned paths (cost={result.total_cost}). Execute to move!")
 
-        # Reset detection flags for fresh move
+
         for crew in game.crew:
             crew.detected = False
 
     return result
 
 
-# ────────────────────────────────────────────────────────────────
-# Execution Phase — Step-by-step with alert system
-# ────────────────────────────────────────────────────────────────
-
 def execute_step(game: GameState) -> StepResult:
     """Execute a single step: move all agents 1 cell, check everything."""
     game.path_step += 1
 
-    # 1. Move crew 1 step
+
     for crew in game.crew:
         if not crew.alive:
             continue
@@ -297,18 +274,18 @@ def execute_step(game: GameState) -> StepResult:
         if game.path_step < len(path):
             crew.x, crew.y = path[game.path_step]
 
-    # 2. Move guards
+
     for guard in game.guards:
         guard.advance_patrol(game.building, game.alert_level.value)
 
-    # 3. Check sensors
+
     agent_positions = {c.agent_id: (c.x, c.y) for c in game.crew if c.alive}
     sensor_events = game.sensors.check_all(agent_positions, game.turn, game.building)
 
-    # 4. Check detections
+
     detections = _check_detections(game)
 
-    # 5. Alert update
+
     alert_msg = _update_alert(game, detections, sensor_events)
 
     return StepResult(
@@ -328,28 +305,23 @@ def execute_step(game: GameState) -> StepResult:
 
 
 def execute_turn(game: GameState) -> TurnResult:
-    """Execute one full turn: move all agents along their entire planned path.
-    
-    Each step is animated on the frontend. Guards, sensors, and detections
-    are checked at every step for realism. After all steps complete,
-    Bayesian update + heuristic Warden response, then returns to PLANNING.
-    """
+    """Execute one full turn: move all agents along their entire planned path."""
     game.turn += 1
 
-    # Tick cooldowns
+
     for crew in game.crew:
         crew.tick_cooldowns()
     game.building.tick_lockdowns()
 
-    # Decay alert
+
     _decay_alert(game)
 
-    # Determine max path length for this turn
+
     max_steps = 1
     for path in game.current_paths.values():
-        max_steps = max(max_steps, len(path) - 1)  # steps = waypoints - 1
+        max_steps = max(max_steps, len(path) - 1)
 
-    # Execute ALL steps of the path so characters reach their destination
+
     all_steps: list[StepResult] = []
     all_sensor_events: list[dict] = []
     all_detections: list[dict] = []
@@ -362,28 +334,28 @@ def execute_turn(game: GameState) -> TurnResult:
         all_sensor_events.extend(step.sensor_events)
         all_detections.extend(step.detections)
 
-    # Bayesian update
+
     observations = _events_to_observations_from_dicts(all_sensor_events)
     game.belief = bayesian_update(game.belief, observations)
     game.belief = predict_movement(game.belief, game.building)
 
-    # Warden AI
+
     warden_action_dict = None
     if game.mode in (GameMode.PVA_MASTERMIND, GameMode.AI_VS_AI):
         warden_action_dict = _run_warden_ai(game)
 
-    # Check objectives
+
     newly_completed = _check_objectives(game)
 
-    # Check endgame
+
     _check_endgame(game)
 
-    # Scoring
+
     game.score -= len(all_sensor_events)
     if not all_detections:
         game.score += 3
 
-    # Always return to planning after each turn (unless game over)
+
     if game.status == GameStatus.EXECUTING:
         game.status = GameStatus.PLANNING
         game.current_paths = {}
@@ -405,10 +377,6 @@ def execute_turn(game: GameState) -> TurnResult:
         event_log=game.event_log[-10:],
     )
 
-
-# ────────────────────────────────────────────────────────────────
-# Abilities
-# ────────────────────────────────────────────────────────────────
 
 def use_ability(game: GameState, agent_id: str, ability: str, target: dict | None = None) -> dict:
     """Player uses an ability for a crew member."""
@@ -447,7 +415,7 @@ def use_ability(game: GameState, agent_id: str, ability: str, target: dict | Non
                 break
 
     elif ability_type == AbilityType.DISABLE_DEVICE:
-        # Prefer disabling an active camera first.
+
         for cam in game.building.cameras:
             if not cam.active:
                 continue
@@ -460,7 +428,7 @@ def use_ability(game: GameState, agent_id: str, ability: str, target: dict | Non
                           "target": cam.camera_id}
                 break
 
-        # If no camera was disabled, allow hacker to complete nearby security objectives.
+
         if not result.get("success"):
             for dy in range(-1, 2):
                 for dx in range(-1, 2):
@@ -477,7 +445,7 @@ def use_ability(game: GameState, agent_id: str, ability: str, target: dict | Non
                         game.objectives_completed.append(obj_name)
                         game.score += 50
 
-                    # Mark security objective as handled on the map.
+
                     cell.objective = None
                     crew.use_ability(ability_type)
                     game.event_log.append(f"HACKER completed {obj_name} at ({cell.x},{cell.y})!")
@@ -491,7 +459,7 @@ def use_ability(game: GameState, agent_id: str, ability: str, target: dict | Non
                     break
 
     elif ability_type == AbilityType.PICK_LOCK:
-        # Priority 1: thief on / adjacent to STEAL_LOOT objective → steal the loot
+
         for dx, dy in [(0, 0), (0, -1), (1, 0), (0, 1), (-1, 0)]:
             cell = game.building.cell_at(crew.x + dx, crew.y + dy)
             if cell and cell.objective == ObjectiveType.STEAL_LOOT:
@@ -508,7 +476,7 @@ def use_ability(game: GameState, agent_id: str, ability: str, target: dict | Non
                 }
                 break
 
-        # Priority 2: pick a nearby locked door
+
         if not result.get("success"):
             for dx, dy in [(0, 0), (0, -1), (1, 0), (0, 1), (-1, 0)]:
                 cell = game.building.cell_at(crew.x + dx, crew.y + dy)
@@ -535,28 +503,13 @@ def use_ability(game: GameState, agent_id: str, ability: str, target: dict | Non
     return result
 
 
-# ────────────────────────────────────────────────────────────────
-# Alert System
-# ────────────────────────────────────────────────────────────────
-
 def _update_alert(game: GameState, detections: list[dict], sensor_events: list) -> str:
-    """Update alert level based on detections. Uses suspicion points for gradual escalation.
-    
-    Suspicion thresholds:
-      0-2  → GREEN  (normal)
-      3-5  → YELLOW (investigating)
-      6-9  → RED    (converging)
-      10+  → LOCKDOWN (one more = game over)
-    
-    Guard detection = +2 suspicion
-    Camera detection = +1 suspicion
-    Sensor trigger = +0.5 suspicion (via sensor_events count)
-    """
+    """Update alert level based on detections. Uses suspicion points for gradual escalation."""
     msg = ""
     if not detections and not sensor_events:
         return msg
 
-    # Add suspicion from detections
+
     for d in detections:
         if d.get("type") == "guard":
             game.suspicion += 2
@@ -564,13 +517,13 @@ def _update_alert(game: GameState, detections: list[dict], sensor_events: list) 
             game.suspicion += 1
         game.last_known_pos = (d["x"], d["y"])
 
-    # Sensor triggers add minor suspicion
+
     triggered = [e for e in sensor_events if isinstance(e, dict) and "trigger" in e.get("event_type", "")]
     game.suspicion += len(triggered) // 2
 
     game.detection_count += len(detections)
 
-    # Determine alert level from suspicion
+
     old_level = game.alert_level
     if game.suspicion >= 12:
         game.alert_level = AlertLevel.LOCKDOWN
@@ -581,11 +534,11 @@ def _update_alert(game: GameState, detections: list[dict], sensor_events: list) 
     else:
         game.alert_level = AlertLevel.GREEN
 
-    # Set guard alert bonuses
+
     for g in game.guards:
         g.alert_bonus_range = game.alert_level.value
 
-    # Generate alert message on level change
+
     if game.alert_level != old_level:
         game.alert_decay_timer = 4 + game.alert_level.value * 2
         if game.alert_level == AlertLevel.YELLOW:
@@ -596,7 +549,7 @@ def _update_alert(game: GameState, detections: list[dict], sensor_events: list) 
             msg = "LOCKDOWN — Next detection means game over!"
         game.event_log.append(msg)
 
-    # Only end game on LOCKDOWN + additional detection
+
     if game.alert_level == AlertLevel.LOCKDOWN and detections:
         if game.suspicion >= 15:
             game.status = GameStatus.LOST
@@ -634,10 +587,6 @@ def _decay_alert(game: GameState):
                 game.event_log.append(f"Alert dropped to {game.alert_level.name}.")
 
 
-# ────────────────────────────────────────────────────────────────
-# AI vs AI
-# ────────────────────────────────────────────────────────────────
-
 def ai_mastermind_plan(game: GameState) -> CBSResult:
     uncompleted = []
     for row in game.building.grid:
@@ -671,10 +620,6 @@ def ai_mastermind_plan(game: GameState) -> CBSResult:
 
     return plan_paths(game, waypoints)
 
-
-# ────────────────────────────────────────────────────────────────
-# Internal helpers
-# ────────────────────────────────────────────────────────────────
 
 def _events_to_observations(events: list[SensorEvent]) -> list[Observation]:
     type_map = {
@@ -722,7 +667,7 @@ def _events_to_observations_from_dicts(events: list[dict]) -> list[Observation]:
 
 
 def _check_detections(game: GameState) -> list[dict]:
-    # God-mode: admin has disabled guard/camera detection
+
     if GOD_MODE:
         return []
     detections = []
@@ -792,7 +737,7 @@ def _check_endgame(game: GameState):
         game.event_log.append("Time is up — the heist has failed!")
         return
 
-    # Check if all crew dead/captured
+
     alive_crew = [c for c in game.crew if c.alive]
     if not alive_crew:
         game.status = GameStatus.LOST
@@ -863,7 +808,7 @@ def _run_warden_ai(game: GameState) -> Optional[dict]:
                 "reason": "Moved nearest guard toward highest-suspicion tile",
             }
 
-    # If no guard can improve position, rotate a camera to face the hotspot.
+
     active_cameras = [c for c in game.building.cameras if c.active]
     if active_cameras:
         cam = min(active_cameras, key=lambda c: abs(c.x - tx) + abs(c.y - ty))

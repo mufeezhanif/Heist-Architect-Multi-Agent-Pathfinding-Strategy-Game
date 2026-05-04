@@ -1,9 +1,3 @@
-"""
-Heist Architect — WebSocket handler
-
-Streams game steps and events to the frontend in real-time.
-Supported actions: plan, execute, ability, ai_plan, ai_step, state
-"""
 import asyncio
 import json
 import math
@@ -24,8 +18,6 @@ from game.engine import (
 ws_router = APIRouter()
 
 
-# ── Helpers ───────────────────────────────────────────────────────────────────
-
 def _safe_float(v: float) -> float:
     """Replace inf/nan with 0.0 for JSON serialization."""
     return 0.0 if (math.isinf(v) or math.isnan(v)) else v
@@ -35,28 +27,28 @@ def _build_step_narration(step_data: dict, prev_positions: dict | None = None) -
     """Generate human-readable narration entries for a single movement step."""
     entries: list[dict] = []
 
-    # Movement
+
     for agent_id, pos in step_data.get("crew_positions", {}).items():
         prev = (prev_positions or {}).get(agent_id)
         if prev and (prev[0] != pos[0] or prev[1] != pos[1]):
             role = agent_id.split("_")[0].capitalize() if "_" in agent_id else agent_id
             entries.append({"type": "move", "text": f"{role} moves to ({pos[0]}, {pos[1]})"})
 
-    # Sensor events
+
     for ev in step_data.get("sensor_events", []):
         pos = ev.get("pos", ["?", "?"])
         x, y = (pos[0], pos[1]) if len(pos) >= 2 else ("?", "?")
         label = ev.get("event_type", "sensor").replace("_", " ").title()
         entries.append({"type": "sensor", "text": f"{label} at ({x}, {y})"})
 
-    # Detections
+
     for det in step_data.get("detections", []):
         entries.append({
             "type": "warden",
             "text": f"Guard spotted {det.get('agent_id', 'agent')} at ({det.get('x', '?')}, {det.get('y', '?')})",
         })
 
-    # Alert message
+
     if alert_msg := step_data.get("alert_message", ""):
         entries.append({"type": "alert", "text": alert_msg})
 
@@ -78,8 +70,6 @@ def _build_turn_narration(result: TurnResult) -> list[dict]:
 
     return entries
 
-
-# ── Streaming helpers ─────────────────────────────────────────────────────────
 
 async def _stream_cbs_events(websocket: WebSocket, tree_log: list[dict], delay: float = 0.08):
     """Stream CBS tree events one by one with a small delay for animation."""
@@ -137,8 +127,6 @@ async def _send_turn_result(websocket: WebSocket, game: GameState, result: TurnR
     await websocket.send_json(turn_data)
 
 
-# ── WebSocket endpoint ────────────────────────────────────────────────────────
-
 @ws_router.websocket("/ws/game/{game_id}")
 async def game_websocket(websocket: WebSocket, game_id: str):
     await websocket.accept()
@@ -161,14 +149,14 @@ async def game_websocket(websocket: WebSocket, game_id: str):
             data = await websocket.receive_json()
             action = data.get("action")
 
-            # ── plan ──────────────────────────────────────────────────────────
+
             if action == "plan":
                 waypoints = {k: (v[0], v[1]) for k, v in data.get("waypoints", {}).items()}
                 result = plan_paths(game, waypoints)
 
                 await _stream_cbs_events(websocket, result.tree_log)
 
-                # CSP dependency info
+
                 csp_info: list[dict] | str = "No dependency constraints active"
                 if game.dependencies:
                     from algorithms.csp import validate_dependencies
@@ -199,13 +187,13 @@ async def game_websocket(websocket: WebSocket, game_id: str):
                     },
                 })
 
-            # ── execute ───────────────────────────────────────────────────────
+
             elif action == "execute":
                 result = execute_turn(game)
                 await _stream_steps(websocket, result)
                 await _send_turn_result(websocket, game, result)
 
-            # ── ability ───────────────────────────────────────────────────────
+
             elif action == "ability":
                 ability_result = use_ability(
                     game,
@@ -222,7 +210,7 @@ async def game_websocket(websocket: WebSocket, game_id: str):
                     "objectives_completed": list(game.objectives_completed),
                 })
 
-            # ── ai_plan ───────────────────────────────────────────────────────
+
             elif action == "ai_plan":
                 result = ai_mastermind_plan(game)
                 await _stream_cbs_events(websocket, result.tree_log, delay=0.1)
@@ -232,7 +220,7 @@ async def game_websocket(websocket: WebSocket, game_id: str):
                     "paths": result.paths,
                 })
 
-            # ── ai_step (plan + execute in one action) ────────────────────────
+
             elif action == "ai_step":
                 plan_result = ai_mastermind_plan(game)
                 await _stream_cbs_events(websocket, plan_result.tree_log, delay=0.05)
@@ -242,7 +230,7 @@ async def game_websocket(websocket: WebSocket, game_id: str):
                     await _stream_steps(websocket, turn_result, step_delay=0.2)
                     await _send_turn_result(websocket, game, turn_result)
 
-            # ── state ─────────────────────────────────────────────────────────
+
             elif action == "state":
                 perspective = data.get("perspective", "spectator")
                 await websocket.send_json({

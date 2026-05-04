@@ -1,6 +1,3 @@
-"""
-Heist Architect — REST API endpoints
-"""
 import math
 
 from fastapi import APIRouter, HTTPException
@@ -35,17 +32,13 @@ def _plan_response(result) -> dict:
     }
 
 
-# ── Request models ────────────────────────────────────────────────────────────
-
 class CreateGameRequest(BaseModel):
-    mode: str = "pva_mastermind"  # or "ai_vs_ai"
+    mode: str = "pva_mastermind"
 
 
 class PlanRequest(BaseModel):
-    waypoints: dict[str, list[int]]  # agent_id → [x, y]
+    waypoints: dict[str, list[int]]
 
-
-# ── Endpoints ─────────────────────────────────────────────────────────────────
 
 @router.post("/create")
 def create_game_endpoint(req: CreateGameRequest):
