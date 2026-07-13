@@ -1,5 +1,9 @@
 # HEIST ARCHITECT — Multi-Agent Pathfinding Strategy Game
 
+**Live:** https://heist-architect-frontend.vercel.app
+
+> Backend is on Render's free plan — it spins down after inactivity, so the first request after a while can take ~30–60s to wake up.
+
 ## One-Line Pitch
 
 > A turn-based strategy game where you plan and execute a multi-agent heist using Conflict-Based Search (CBS) to route your crew through a guarded building — while your opponent (human or AI) controls security forces trying to intercept you using Bayesian tracking and adversarial search.
