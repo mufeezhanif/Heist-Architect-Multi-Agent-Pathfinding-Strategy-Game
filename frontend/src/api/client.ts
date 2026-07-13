@@ -2,7 +2,7 @@
 import { useGameStore } from '../store/gameStore'
 import { normalizeAgent, normalizeGuard } from './normalize'
 
-const API = '/api'
+const API = import.meta.env.VITE_API_URL || ''
 
 // ── REST helpers ──
 async function post<T>(url: string, body?: unknown): Promise<T> {
@@ -54,8 +54,9 @@ export async function executeTurn(gameId: string) {
 let ws: WebSocket | null = null
 
 export function connectWebSocket(gameId: string) {
-  const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws'
-  const host = window.location.host
+  const base = import.meta.env.VITE_API_URL as string | undefined
+  const host = base ? base.replace(/^https?:\/\//, '') : window.location.host
+  const protocol = base ? (base.startsWith('https:') ? 'wss' : 'ws') : (window.location.protocol === 'https:' ? 'wss' : 'ws')
   ws = new WebSocket(`${protocol}://${host}/ws/game/${gameId}`)
 
   ws.onopen = () => {
